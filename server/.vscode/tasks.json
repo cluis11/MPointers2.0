@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compile MemoryMap",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "MemoryMap.cpp",
+                "-o",
+                "MemoryMap.exe",
+                "-mconsole" // Ensures it runs as a console app
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
