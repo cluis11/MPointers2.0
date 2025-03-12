@@ -67,7 +67,7 @@ class MemoryList
             }
         }
 
-        MemoryMap* findById(int id) {
+        MemoryMap* findById(int id){
             Node* current = head;
             while (current != nullptr){
                 if (current->block.id == id){
@@ -99,7 +99,7 @@ class MemoryList
             return false;
         }
 
-        void printList() const {
+        void printList() {
             Node* current = head;
             while (current != nullptr) {
                 current->block.print(); 
@@ -167,13 +167,13 @@ class MemoryBlock {
         }
 
         *static_cast<T*>(block->ptr) = value;
-        block->refCount = 1;  // Actualizar refCount
-        block->isNew = false;  // Ya no es nuevo
+        block->refCount = 1;  
+        block->isNew = false;  
     }
 
 
     template <typename T>
-    T Get(int id) const {
+    T Get(int id) {
         MemoryMap* block = memList.findById(id);
         if (!block) {
             cout << "Bloque de memoria no encontrado";
@@ -186,50 +186,86 @@ class MemoryBlock {
         if (!block) {
             cout << "Bloque de memoria no encontrado";
         }
-
         block->refCount++;
     }
 
+    void DecreaseRefCount(int id) {
+        MemoryMap* block = memList.findById(id);
+        if (!block) {
+            cout << "Bloque de memoria no encontrado";
+        }
+        --block->refCount;
+    }
+
+    void PrintMemoryList() {
+        cout << "Contenido de la lista de MemoryBlock:" << std::endl;
+        memList.printList();
+    }
 
 };
 
 int main() {
-    // Crear una lista de bloques de memoria
-    MemoryList list;
+    // Crear un bloque de memoria de 10 MB
+    MemoryBlock memoryBlock(10);
 
-    // Crear algunos bloques de memoria y agregarlos a la lista
-    void* ptr1 = new char[100]; // Bloque de memoria de 100 bytes
-    list.insert(1, 100, "Type1", ptr1);
-
-    void* ptr2 = new char[200]; // Bloque de memoria de 200 bytes
-    list.insert(2, 200, "Type2", ptr2);
-
-    void* ptr3 = new char[300]; // Bloque de memoria de 300 bytes
-    list.insert(3, 300, "Type3", ptr3);
-
-    std::cout << "Lista despues de insertar bloques:" << std::endl;
-    list.printList();
-
-    // Buscar un bloque de memoria por su id
-    std::cout << "\nBuscando el bloque con ID 2:" << std::endl;
-    MemoryMap* block = list.findById(2);
-    if (block) {
-        block->print();
-    } else {
-        std::cout << "Bloque con ID 2 no encontrado." << std::endl;
+    // Prueba de Create
+    int intId = memoryBlock.Create(sizeof(int), "int");
+    if (intId != -1) {
+        std::cout << "Bloque de memoria para entero creado con ID: " << intId << std::endl;
     }
 
-    // Eliminar un bloque de memoria por su id
-    std::cout << "\nEliminando el bloque con ID 1:" << std::endl;
-    if (list.removeById(2)) {
-        std::cout << "Bloque con ID 1 eliminado." << std::endl;
-    } else {
-        std::cout << "Bloque con ID 1 no encontrado." << std::endl;
+    int floatId = memoryBlock.Create(sizeof(float), "float");
+    if (floatId != -1) {
+        std::cout << "Bloque de memoria para float creado con ID: " << floatId << std::endl;
     }
 
-    // Imprimir la lista después de eliminar un bloque
-    std::cout << "\nLista después de eliminar el bloque con ID 1:" << std::endl;
-    list.printList();
+    int stringId = memoryBlock.Create(sizeof(std::string), "string");
+    if (stringId != -1) {
+        std::cout << "Bloque de memoria para string creado con ID: " << stringId << std::endl;
+    }
+
+    // Imprimir la lista después de crear los bloques
+    std::cout << "\nEstado de la lista después de Create:" << std::endl;
+    memoryBlock.PrintMemoryList();
+
+    // Prueba de Set
+    if (intId != -1) {
+        memoryBlock.Set(intId, 42);
+        std::cout << "\nValor del bloque de memoria para entero (ID " << intId << "): "
+                  << memoryBlock.Get<int>(intId) << std::endl;
+    }
+
+    if (floatId != -1) {
+        memoryBlock.Set(floatId, 3.14f);
+        std::cout << "Valor del bloque de memoria para float (ID " << floatId << "): "
+                  << memoryBlock.Get<float>(floatId) << std::endl;
+    }
+
+    if (stringId != -1) {
+        memoryBlock.Set(stringId, std::string("Hola, mundo!"));
+        std::cout << "Valor del bloque de memoria para string (ID " << stringId << "): "
+                  << memoryBlock.Get<std::string>(stringId) << std::endl;
+    }
+
+    // Imprimir la lista después de Set
+    std::cout << "\nEstado de la lista después de Set:" << std::endl;
+    memoryBlock.PrintMemoryList();
+
+    // Prueba de IncreaseRefCount y DecreaseRefCount
+    if (intId != -1) {
+        memoryBlock.IncreaseRefCount(intId);
+        memoryBlock.IncreaseRefCount(intId);
+        std::cout << "\nRefCount del bloque de memoria para entero (ID " << intId << ") incrementado dos veces." << std::endl;
+    }
+
+    if (floatId != -1) {
+        memoryBlock.DecreaseRefCount(floatId);
+        std::cout << "RefCount del bloque de memoria para float (ID " << floatId << ") decrementado una vez." << std::endl;
+    }
+
+    // Imprimir la lista después de modificar RefCount
+    std::cout << "\nEstado de la lista después de modificar RefCount:" << std::endl;
+    memoryBlock.PrintMemoryList();
 
     return 0;
 }
