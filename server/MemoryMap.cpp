@@ -143,7 +143,7 @@ class MemoryBlock {
         size_t memSize;
         size_t usedMem;
         MemoryList memList;
-        int nextId;
+        int nextId=0;
 
     public:
         MemoryBlock(size_t sizeMB){
