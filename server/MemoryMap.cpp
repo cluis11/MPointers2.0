@@ -1,22 +1,47 @@
 #include <iostream>
 #include <string>
 #include <cstddef> 
+
 using std::string;
 using std::size_t;
 using std::cout;
 
+//includes para GRPC
+#include <grpcpp/grpcpp.h>
+#include "../proto/memory_manager.grpc.pb.h"
+
+using grpc::Server;
+using grpc::ServerBuilder;
+using grpc::ServerContext;
+using grpc::Status;
+using memorymanager::MemoryManager;
+using memorymanager::CreateRequest;
+using memorymanager::CreateResponse;
+using memorymanager::SetRequest;
+using memorymanager::SetResponse;
+using memorymanager::GetRequest;
+using memorymanager::GetResponse;
+using memorymanager::IncreaseRefCountRequest;
+using memorymanager::IncreaseRefCountResponse;
+using memorymanager::DecreaseRefCountRequest;
+using memorymanager::DecreaseRefCountResponse;
+
+
+//Estructura para almacenar datos en el nodo del Memory Map
 struct MemoryMap
 {
-    int id;
-    size_t size;
-    string type;
-    int refCount;
-    void* ptr;
-    bool isNew;
+    int id; //identificador del bloque de memoria
+    size_t size; //tamaño del bloque de memoria
+    string type; //tipo de dato asociado al bloque
+    int refCount; //conteo de referencias
+    void* ptr; //puntero a la direccion de memoria dentro del bloque de memoria
+    bool isNew; //bandera para saber si el bloque esta recien creado
 
+    //constructor de la estructura
     MemoryMap(int id, size_t size, string type, void* ptr)
         : id(id), size(size), type(type), refCount(0), ptr(ptr), isNew(true) {}
 
+    //función para imprimir los datos de la estructura
     void print() const {
         cout << "ID: " << id
             << ", Size: " << size
@@ -26,15 +51,19 @@ struct MemoryMap
     }
 };
 
+//Nodo del MemoryBlock
 struct Node
 {
-    MemoryMap block;
-    Node* next;
+    MemoryMap block; //bloque de memoria que se va a guardar
+    Node* next; //puntero al siguiente nodo de la lista
 
+    //constructuor del nodo
     Node(int id, size_t size, string type, void* ptr)
         : block(id, size, type, ptr), next(nullptr) {}
 };
 
+
+//Lista que se unitiliza en el memory map para monitoreas la asignación de memoria
 class MemoryList
 {
     private:
@@ -131,26 +160,22 @@ class MemoryBlock {
         }
 
         int Create(size_t size, const string& type) {
-            if (usedMem + size > memSize){
-                cout << "No hay espacio suficiente";
-                return -1;
+            if (usedMem + size > memSize) {
+                throw std::runtime_error("No hay espacio suficiente");
             }
-
-            if (type == "int" && size != sizeof(int)){
-                cout << "La memoria dada no coincide con el tipo de dato";
-                return -1;
+        
+            if (type == "int" && size != sizeof(int)) {
+                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'int'");
             }
-            else if (type == "float" && size != sizeof(float)){
-                cout << "La memoria dada no coincide con el tipo de dato";
-                return -1;
+            else if (type == "float" && size != sizeof(float)) {
+                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'float'");
             }
-            else if (type == "string" && size != sizeof(string)){
-                cout << "La memoria dada no coincide con el tipo de dato";
-                return -1;
+            else if (type == "string" && size != sizeof(string)) {
+                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'string'");
             }
             
-            void* addr = static_cast<char*>(memBlock) + usedMem; // cambiar para casos de fragmentación
-
+            void* addr = static_cast<char*>(memBlock) + usedMem;
+        
             memList.insert(nextId, size, type, addr); 
             usedMem += size; 
             return nextId++;
@@ -158,43 +183,47 @@ class MemoryBlock {
 
         template <typename T>
         void Set(int id, const T& value) {
-        MemoryMap* block = memList.findById(id);
-        if (!block) {
-            cout << "Bloque de memoria no se ha encontrado";
-        }
-        if (sizeof(T) > block->size) {
-            cout << "El valor es más grande que el bloque de memoria";
+            MemoryMap* block = memList.findById(id);
+            if (!block) {
+                throw std::runtime_error("Bloque de memoria no se ha encontrado");
+            }
+            if (sizeof(T) > block->size) {
+                throw std::runtime_error("El valor es más grande que el bloque de memoria");
+            }
+
+            *static_cast<T*>(block->ptr) = value;
+            block->refCount = 1;  
+            block->isNew = false;  
         }
 
-        *static_cast<T*>(block->ptr) = value;
-        block->refCount = 1;  
-        block->isNew = false;  
-    }
 
-
-    template <typename T>
-    T Get(int id) {
-        MemoryMap* block = memList.findById(id);
-        if (!block) {
-            cout << "Bloque de memoria no encontrado";
+        template <typename T>
+        T Get(int id) {
+            MemoryMap* block = memList.findById(id);
+            if (!block) {
+                throw std::runtime_error("Bloque de memoria no encontrado");
+            }
+            return *static_cast<T*>(block->ptr);
         }
-        return *static_cast<T*>(block->ptr);
-    }
 
-    void IncreaseRefCount(int id) {
-        MemoryMap* block = memList.findById(id);
-        if (!block) {
-            cout << "Bloque de memoria no encontrado";
+        void IncreaseRefCount(int id) {
+            MemoryMap* block = memList.findById(id);
+            if (!block) {
+                throw std::runtime_error("Bloque de memoria no encontrado");
+            }
+            block->refCount++;
         }
-        block->refCount++;
-    }
+        
+        void DecreaseRefCount(int id) {
+            MemoryMap* block = memList.findById(id);
+            if (!block) {
+                throw std::runtime_error("Bloque de memoria no encontrado");
+            }
+            --block->refCount;
+        }
 
-    void DecreaseRefCount(int id) {
-        MemoryMap* block = memList.findById(id);
-        if (!block) {
-            cout << "Bloque de memoria no encontrado";
-        }
-        --block->refCount;
+    MemoryMap* GetMemoryMapById(int id) {
+        return memList.findById(id);
     }
 
     void PrintMemoryList() {
@@ -204,68 +233,126 @@ class MemoryBlock {
 
 };
 
-int main() {
-    // Crear un bloque de memoria de 10 MB
-    MemoryBlock memoryBlock(10);
-
-    // Prueba de Create
-    int intId = memoryBlock.Create(sizeof(int), "int");
-    if (intId != -1) {
-        std::cout << "Bloque de memoria para entero creado con ID: " << intId << std::endl;
+class MemoryManagerServiceImpl final : public MemoryManager::Service {
+    public:
+        MemoryManagerServiceImpl(MemoryBlock& memoryBlock) : memoryBlock_(memoryBlock) {}
+    
+        Status Create(ServerContext* context, const CreateRequest* request, CreateResponse* response) override {
+            try {
+                int id = memoryBlock_.Create(request->size(), request->type());
+                response->set_success(true);
+                response->set_id(id);
+            } catch (const std::exception& e) {
+                response->set_success(false);
+            }
+            return Status::OK;
+        }
+    
+        Status Set(ServerContext* context, const SetRequest* request, SetResponse* response) override {
+            try {
+                if (request->has_int_value()) {
+                    memoryBlock_.Set<int>(request->id(), request->int_value());
+                } else if (request->has_float_value()) {
+                    memoryBlock_.Set<float>(request->id(), request->float_value());
+                } else if (request->has_string_value()) {
+                    memoryBlock_.Set<std::string>(request->id(), request->string_value());
+                }
+                response->set_success(true);
+            } catch (const std::exception& e) {
+                response->set_success(false);
+            }
+            return Status::OK;
+        }
+    
+        Status Get(ServerContext* context, const GetRequest* request, GetResponse* response) override {
+            try {
+                MemoryMap* block = memoryBlock_.GetMemoryMapById(request->id());
+                if (!block) {
+                    response->set_success(false);
+                    return Status::OK;
+                }
+        
+                response->set_success(true);
+                if (block->type == "int") {
+                    response->set_int_value(memoryBlock_.Get<int>(request->id()));
+                } else if (block->type == "float") {
+                    response->set_float_value(memoryBlock_.Get<float>(request->id()));
+                } else if (block->type == "string") {
+                    response->set_string_value(memoryBlock_.Get<std::string>(request->id()));
+                }
+            } catch (const std::exception& e) {
+                response->set_success(false);
+            }
+            return Status::OK;
+        }
+    
+        Status IncreaseRefCount(ServerContext* context, const IncreaseRefCountRequest* request, IncreaseRefCountResponse* response) override {
+            try {
+                memoryBlock_.IncreaseRefCount(request->id());
+                response->set_success(true);
+            } catch (const std::exception& e) {
+                response->set_success(false);
+            }
+            return Status::OK;
+        }
+        
+        Status DecreaseRefCount(ServerContext* context, const DecreaseRefCountRequest* request, DecreaseRefCountResponse* response) override {
+            try {
+                memoryBlock_.DecreaseRefCount(request->id());
+                response->set_success(true);
+            } catch (const std::exception& e) {
+                response->set_success(false);
+            }
+            return Status::OK;
+        }
+    
+    private:
+        MemoryBlock& memoryBlock_;
+    };
+    
+    void RunServer(const std::string& listenPort, size_t memSize) {
+        MemoryBlock memoryBlock(memSize); // Inicializa el MemoryBlock con el tamaño especificado
+    
+        MemoryManagerServiceImpl service(memoryBlock);
+    
+        ServerBuilder builder;
+        builder.AddListeningPort("0.0.0.0:" + listenPort, grpc::InsecureServerCredentials());
+        builder.RegisterService(&service);
+    
+        std::unique_ptr<Server> server(builder.BuildAndStart());
+        std::cout << "Servidor escuchando en el puerto " << listenPort << std::endl;
+        server->Wait();
     }
-
-    int floatId = memoryBlock.Create(sizeof(float), "float");
-    if (floatId != -1) {
-        std::cout << "Bloque de memoria para float creado con ID: " << floatId << std::endl;
+    
+    int main(int argc, char** argv) {
+        if (argc != 7) {
+            std::cerr << "Uso: " << argv[0] << " --port LISTEN_PORT --memsize SIZE_MB --dumpFolder DUMP_FOLDER" << std::endl;
+            return 1;
+        }
+    
+        std::string listenPort;
+        size_t memSize = 0;
+        std::string dumpFolder;
+    
+        for (int i = 1; i < argc; i++) {
+            std::string arg = argv[i];
+            if (arg == "--port" && i + 1 < argc) {
+                listenPort = argv[++i];
+            } else if (arg == "--memsize" && i + 1 < argc) {
+                memSize = std::stoul(argv[++i]);
+            } else if (arg == "--dumpFolder" && i + 1 < argc) {
+                dumpFolder = argv[++i];
+            } else {
+                std::cerr << "Argumento desconocido o valor faltante: " << arg << std::endl;
+                return 1;
+            }
+        }
+    
+        if (listenPort.empty() || memSize == 0 || dumpFolder.empty()) {
+            std::cerr << "Faltan parámetros requeridos." << std::endl;
+            return 1;
+        }
+    
+        RunServer(listenPort, memSize);
+        return 0;
     }
-
-    int stringId = memoryBlock.Create(sizeof(std::string), "string");
-    if (stringId != -1) {
-        std::cout << "Bloque de memoria para string creado con ID: " << stringId << std::endl;
-    }
-
-    // Imprimir la lista después de crear los bloques
-    std::cout << "\nEstado de la lista después de Create:" << std::endl;
-    memoryBlock.PrintMemoryList();
-
-    // Prueba de Set
-    if (intId != -1) {
-        memoryBlock.Set(intId, 42);
-        std::cout << "\nValor del bloque de memoria para entero (ID " << intId << "): "
-                  << memoryBlock.Get<int>(intId) << std::endl;
-    }
-
-    if (floatId != -1) {
-        memoryBlock.Set(floatId, 3.14f);
-        std::cout << "Valor del bloque de memoria para float (ID " << floatId << "): "
-                  << memoryBlock.Get<float>(floatId) << std::endl;
-    }
-
-    if (stringId != -1) {
-        memoryBlock.Set(stringId, std::string("Hola, mundo!"));
-        std::cout << "Valor del bloque de memoria para string (ID " << stringId << "): "
-                  << memoryBlock.Get<std::string>(stringId) << std::endl;
-    }
-
-    // Imprimir la lista después de Set
-    std::cout << "\nEstado de la lista después de Set:" << std::endl;
-    memoryBlock.PrintMemoryList();
-
-    // Prueba de IncreaseRefCount y DecreaseRefCount
-    if (intId != -1) {
-        memoryBlock.IncreaseRefCount(intId);
-        memoryBlock.IncreaseRefCount(intId);
-        std::cout << "\nRefCount del bloque de memoria para entero (ID " << intId << ") incrementado dos veces." << std::endl;
-    }
-
-    if (floatId != -1) {
-        memoryBlock.DecreaseRefCount(floatId);
-        std::cout << "RefCount del bloque de memoria para float (ID " << floatId << ") decrementado una vez." << std::endl;
-    }
-
-    // Imprimir la lista después de modificar RefCount
-    std::cout << "\nEstado de la lista después de modificar RefCount:" << std::endl;
-    memoryBlock.PrintMemoryList();
-
-    return 0;
-}
