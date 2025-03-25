@@ -68,9 +68,10 @@ class MemoryList
 {
     private:
         Node* head;
+        Node* last;
     
     public:
-        MemoryList(): head(nullptr) {}
+        MemoryList(): head(nullptr), last(nullptr) {}
 
         ~MemoryList() {
             Node* current = head;
@@ -82,10 +83,13 @@ class MemoryList
             }
         }
 
+        Node* getLast() const { return last; }
+
         void insert(int id, size_t size, const string& type, void* ptr) {
             Node* newNode = new Node(id, size, type, ptr);
             if (head == nullptr){
                 head = newNode;
+                last = newNode;
             }
             else{
                 Node* current = head;
@@ -93,7 +97,23 @@ class MemoryList
                     current = current->next;
                 }
                 current->next = newNode;
+                last=newNode;
             }
+        }
+
+        bool insertNextTo(int id, int newId, size_t size, const string& type, void* ptr) {
+            Node* current = head;
+            while (current) {
+                if (current->block.id == id) {
+                    // Crear nuevo nodo con el espacio sobrante
+                    Node* newNode = new Node(newId, size, type, ptr);
+                    newNode->next = current->next;
+                    current->next = newNode;
+                    return true;
+                }
+                current = current->next;
+            }
+            return false; // No se encontró el id
         }
 
         MemoryMap* findById(int id){
@@ -107,7 +127,7 @@ class MemoryList
             return nullptr;
         }
 
-        bool removeById(int id) {
+        /*bool removeById(int id) {
             Node* current = head;
             Node* previous = nullptr;
             while (current != nullptr){
@@ -126,7 +146,50 @@ class MemoryList
                 current = current->next;
             }
             return false;
+        }*/
+
+        bool removeById(int id) {
+            Node* current = head;
+            while (current != nullptr){
+                if (current->block.id == id){
+                    std::memset(current->block.ptr, 0, current->block.size);
+                    current->block.isNew = true;
+                    current->block.type = "";
+                    return true;
+                }
+                current = current->next;
+            }
+            return false;
         }
+
+    int reuseFreeBlock(size_t size, const string& newType, int newId) {
+        Node* current = head;
+        while (current) {
+            if (current->block.type == "" && current->block.size >= size) {
+                //Tamaño exacto, Reutilizar el bloque completo
+                if (current->block.size == size) {
+                    current->block.type = newType;
+                    return current->block.id;
+                }
+                //Bloque más grande, Dividirlo
+                else {
+                    void* blockAddr = current->block.ptr;
+                    size_t remainingSize = current->block.size - size;
+                    void* remainingAddr = static_cast<char*>(blockAddr) + size;
+                    
+                    // Actualizar el bloque actual con el tamaño solicitado
+                    current->block.size = size;
+                    current->block.type = newType;
+                    
+                    // Insertar el espacio sobrante como nuevo nodo libre
+                    insertNextTo(current->block.id, newId, remainingSize, "", remainingAddr);
+                    return current->block.id;
+                }
+            }
+            current = current->next;
+        }
+        return -1; // No hay bloques libres
+    }
 
         void printList() {
             Node* current = head;
@@ -142,8 +205,26 @@ class MemoryBlock {
         void* memBlock;
         size_t memSize;
         size_t usedMem;
+        size_t memAtEnd;
         MemoryList memList;
         int nextId=0;
+
+        void* GetLastFreeAddr() {
+            Node* lastNode = memList.getLast();
+            
+            //No hay bloques asignados, toda la memoria está libre
+            if (!lastNode) {
+                memAtEnd = memSize;  
+                return memBlock;      // retorna direccion inicial
+            }
+        
+            //calcula ultima dirección libre y espacio restante
+            void* lastBlockEnd = static_cast<char*>(lastNode->block.ptr) + lastNode->block.size;
+            void* totalMemEnd = static_cast<char*>(memBlock) + memSize;
+            
+            memAtEnd = static_cast<size_t>(static_cast<char*>(totalMemEnd) - static_cast<char*>(lastBlockEnd));
+            return lastBlockEnd;  //Retorna la primera dirección libre
+        }
 
     public:
         MemoryBlock(size_t sizeMB){
@@ -153,13 +234,14 @@ class MemoryBlock {
                 cout << "Error al reservar la memoria";
             }
             usedMem = 0;
+            memAtEnd = memSize;
         }
 
         ~MemoryBlock(){
             free(memBlock);
         }
 
-        int Create(size_t size, const string& type) {
+        /*int Create(size_t size, const string& type) {
             if (usedMem + size > memSize) {
                 throw std::runtime_error("No hay espacio suficiente");
             }
@@ -179,7 +261,41 @@ class MemoryBlock {
             memList.insert(nextId, size, type, addr); 
             usedMem += size; 
             return nextId++;
+        }*/
+
+        int Create(size_t size, const string& type) {
+            //Validaciones (memoria total y tipos)
+            if (usedMem + size > memSize) {
+                throw std::runtime_error("No hay espacio suficiente");
+            }
+            if (type == "int" && size != sizeof(int)) {
+                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'int'");
+            }
+            else if (type == "float" && size != sizeof(float)) {
+                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'float'");
+            }
+            else if (type == "string" && size != sizeof(string)) {
+                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'string'");
+            }
+        
+            //Verificar si hay espacio contiguo al final
+            if (size <= memAtEnd) {
+                memList.insert(nextId, size, type, GetLastFreeAddr());
+                usedMem += size;
+                memAtEnd -= size;
+                return nextId++;
+            }
+            else {
+                int reusedId = memList.reuseFreeBlock(size, type, nextId);
+                if (reusedId > -1) {
+                    usedMem += size; // Solo si los bloques libres no estaban en usedMem
+                    nextId++;
+                    return reusedId;
+                }
+                throw std::runtime_error("No hay bloques liberados suficientes");
+            }
         }
+
 
         template <typename T>
         void Set(int id, const T& value) {
