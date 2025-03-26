@@ -1,11 +1,12 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <cstddef> 
-
-using std::string;
-using std::size_t;
-using std::cout;
-
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <iomanip>
+#include <chrono>
 //includes para GRPC
 #include <grpcpp/grpcpp.h>
 #include "../proto/memory_manager.grpc.pb.h"
@@ -25,7 +26,9 @@ using memorymanager::IncreaseRefCountRequest;
 using memorymanager::IncreaseRefCountResponse;
 using memorymanager::DecreaseRefCountRequest;
 using memorymanager::DecreaseRefCountResponse;
-
+using std::string;
+using std::size_t;
+using std::cout;
 
 //Estructura para almacenar datos en el nodo del Memory Map
 struct MemoryMap
@@ -68,11 +71,13 @@ class MemoryList
 {
     private:
         Node* head;
+        std::mutex mtx;
     
     public:
         MemoryList(): head(nullptr) {}
 
         ~MemoryList() {
+            std::lock_guard<std::mutex> lock(mtx);
             Node* current = head;
             while (current != nullptr){
                 Node* nextNode = current->next;
@@ -83,6 +88,7 @@ class MemoryList
         }
 
         void insert(int id, size_t size, const string& type, void* ptr) {
+            std::lock_guard<std::mutex> lock(mtx);
             Node* newNode = new Node(id, size, type, ptr);
             if (head == nullptr){
                 head = newNode;
@@ -97,6 +103,7 @@ class MemoryList
         }
 
         MemoryMap* findById(int id){
+            std::lock_guard<std::mutex> lock(mtx);
             Node* current = head;
             while (current != nullptr){
                 if (current->block.id == id){
@@ -108,6 +115,7 @@ class MemoryList
         }
 
         bool removeById(int id) {
+            std::lock_guard<std::mutex> lock(mtx);
             Node* current = head;
             Node* previous = nullptr;
             while (current != nullptr){
@@ -129,13 +137,107 @@ class MemoryList
         }
 
         void printList() {
+            std::lock_guard<std::mutex> lock(mtx);
             Node* current = head;
             while (current != nullptr) {
                 current->block.print(); 
                 current = current->next; 
             }
         }
+
+        Node* getHead() {
+            std::lock_guard<std::mutex> lock(mtx);
+            return head;
+        }
+
+        void setHead(Node* newHead) {
+            std::lock_guard<std::mutex> lock(mtx);
+            head = newHead;
+        }
+
+        int getSize() {
+            int num = 0;
+            Node* current = head;
+            while (current != nullptr) {
+                num++;
+                current = current->next;
+            }
+            return num;
+        }
+
+        auto getPtr(int id) {
+            Node* current = head;
+
+            while (current != nullptr) {
+                if (current->block.id == id) {
+                    return current->block.ptr;
+                }
+            }
+        }
 };
+
+
+class Dumps {
+    private:
+        string dumpFolder;
+        MemoryList& memList;
+
+    public: 
+        Dumps(string folder, MemoryList& list) : dumpFolder(folder), memList(list) {}
+
+        void CreateDump() {
+            auto now = std::chrono::system_clock::now();
+            auto time_t = std::chrono::system_clock::to_time_t(now);
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+            
+            std::ostringstream oss;
+            oss << std::put_time(std::localtime(&time_t), "%Y%m%dT%H%M%S")
+                << std::setw(3) << std::setfill('0') << ms.count();
+            
+            
+            std::string datetime = oss.str();
+            std::string fileName = dumpFolder + "/" + datetime + ".txt";
+
+            std::fstream archive;
+            archive.open(fileName, std::ios::out);
+            
+            if (!archive.is_open()) {
+                std::cerr << "Error al abrir el arhcivo del dump: " << fileName << std::endl;
+                return;
+            }
+
+            Node* current = memList.getHead(); // Obtener la cabeza de la lista
+
+            while (current != nullptr) {
+                archive << "ID: " << current->block.id
+                    << ", Size: " << current->block.size
+                    << ", Type: " << current->block.type
+                    << ", RefCount: " << current->block.refCount
+                    << ", Ptr: " << current->block.ptr;
+
+                // Escribir el valor almacenado en la memoria si es un tipo primitivo
+                if (current->block.type == "int") {
+                    archive << ", Value: " << *static_cast<int*>(current->block.ptr);
+                }
+                else if (current->block.type == "float") {
+                    archive << ", Value: " << *static_cast<float*>(current->block.ptr);
+                }
+                else if (current->block.type == "string") {
+                    archive << ", Value: " << *static_cast<std::string*>(current->block.ptr);
+                }
+                else {
+                    archive << ", Value: [No serializable]";
+                }
+
+                archive << std::endl;
+                current = current->next;
+            }
+
+            archive.close();
+            std::cout << "Dump creado: " << fileName << std::endl;
+        }
+};
+
 
 class MemoryBlock {
     private:
@@ -143,11 +245,12 @@ class MemoryBlock {
         size_t memSize;
         size_t usedMem;
         MemoryList memList;
+        Dumps dumps;
         int nextId=0;
 
     public:
-        MemoryBlock(size_t sizeMB){
-            memSize = sizeMB * 1024 * 1024;
+        MemoryBlock(size_t sizeMB, const string& dumpFolder)
+        : memSize(sizeMB * 1024 * 1024), memList(), dumps(dumpFolder, memList) {
             memBlock = malloc(memSize);
             if (!memBlock) {
                 cout << "Error al reservar la memoria";
@@ -194,6 +297,7 @@ class MemoryBlock {
             *static_cast<T*>(block->ptr) = value;
             block->refCount = 1;  
             block->isNew = false;  
+            dumps.CreateDump();
         }
 
 
@@ -219,7 +323,9 @@ class MemoryBlock {
             if (!block) {
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }
-            --block->refCount;
+            if (--block->refCount == 0) {
+                memList.removeById(id);
+            }
         }
 
     MemoryMap* GetMemoryMapById(int id) {
@@ -231,7 +337,59 @@ class MemoryBlock {
         memList.printList();
     }
 
+    MemoryList& GetMemoryList() {
+        return memList;
+    }
+
 };
+
+
+
+class GarbageCollector {
+    private:
+        MemoryList& memList;
+        std::atomic<bool> running;
+
+    public:
+        GarbageCollector(MemoryList& memlist) : memList(memList), running(true) {}
+
+        void Stop() {
+            running = false;
+        }
+
+        void Search() {
+            cout << "Iniciando Garbage Collector..." << std::endl;
+
+            while (running) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                Node* current = memList.getHead();
+                Node* previus = nullptr;
+
+                while (current != nullptr) {
+                    if (current->block.refCount == 0) {
+                        cout << "Eliminando bloque de memoria con ID: " << current->block.id << std::endl;
+                        if (previus == nullptr) {
+                            memList.setHead(current->next);
+                        }
+                        else {
+                            previus->next = current->next;
+                        }
+                        Node* toDelete = current;
+                        current = current->next;
+
+                        delete static_cast<char*>(toDelete->block.ptr);
+                        delete toDelete;
+                    }
+                    else {
+                        previus = current;
+                        current = current->next;
+                    }
+                }
+            }
+        }
+};
+
 
 class MemoryManagerServiceImpl final : public MemoryManager::Service {
     public:
@@ -310,9 +468,12 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
         MemoryBlock& memoryBlock_;
     };
     
-    void RunServer(const std::string& listenPort, size_t memSize) {
-        MemoryBlock memoryBlock(memSize); // Inicializa el MemoryBlock con el tamaño especificado
-    
+    void RunServer(const std::string& listenPort, size_t memSize, std::string folder) {
+        MemoryBlock memoryBlock(memSize, folder); // Inicializa el MemoryBlock con el tamaño especificado
+        
+        GarbageCollector gc(memoryBlock.GetMemoryList());
+        std::thread gcTh([&gc]() { gc.Search(); });
+
         MemoryManagerServiceImpl service(memoryBlock);
     
         ServerBuilder builder;
@@ -321,11 +482,16 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
     
         std::unique_ptr<Server> server(builder.BuildAndStart());
         std::cout << "Servidor escuchando en el puerto " << listenPort << std::endl;
+
         server->Wait();
+        gc.Stop();
+        gcTh.join();
     }
+
+
     
     int main(int argc, char** argv) {
-        if (argc != 7) {
+       if (argc != 7) {
             std::cerr << "Uso: " << argv[0] << " --port LISTEN_PORT --memsize SIZE_MB --dumpFolder DUMP_FOLDER" << std::endl;
             return 1;
         }
@@ -352,7 +518,7 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
             std::cerr << "Faltan parámetros requeridos." << std::endl;
             return 1;
         }
-    
-        RunServer(listenPort, memSize);
+
+        RunServer(listenPort, memSize, dumpFolder);
         return 0;
     }

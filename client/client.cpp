@@ -162,8 +162,39 @@ int main() {
             if (client.DecreaseRefCount(block_id)) {
                 std::cout << "Conteo de referencias decrementado." << std::endl;
             }
+            if (client.Set(block_id, 12)) {
+                std::cout << "Valor asignado correctamente." << std::endl;
+            }
         }
     }
 
+    int block_id2 = client.Create(4, "int");
+    if (block_id2 != -1) {
+        std::cout << "Bloque de memoria creado con ID: " << block_id2 << std::endl;
+
+        // Prueba el método Set
+        if (client.Set(block_id2, 5)) {
+            std::cout << "Valor asignado correctamente." << std::endl;
+
+            // Prueba el método Get
+            int value = client.Get(block_id2);
+            if (value != -1) {
+                std::cout << "Valor obtenido: " << value << std::endl;
+            }
+
+            // Prueba el método IncreaseRefCount
+            /*if (client.IncreaseRefCount(block_id)) {
+                std::cout << "Conteo de referencias incrementado." << std::endl;
+            }*/
+
+            // Prueba el método DecreaseRefCount
+            if (client.DecreaseRefCount(block_id)) {
+                std::cout << "Conteo de referencias decrementado." << std::endl;
+            }
+            if (client.Set(block_id, 12)) {
+                std::cout << "Valor asignado correctamente." << std::endl;
+            }
+        }
+    }
     return 0;
 }
