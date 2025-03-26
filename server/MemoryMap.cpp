@@ -257,27 +257,6 @@ class MemoryBlock {
             return (memAtEnd > 0) ? lastBlockEnd : nullptr;
         }
 
-        void UpdateMemoryOnFree(size_t freedSize, void* freedPtr) {
-            // 1. Actualizar memoria usada (siempre resta el tamaño)
-            usedMem -= freedSize;
-        
-            // 2. Verificar si es el último bloque
-            Node* lastNode = memList.getLast();
-            if (lastNode) {
-                void* lastBlockEnd = static_cast<char*>(lastNode->block.ptr) + lastNode->block.size;
-                void* freedBlockEnd = static_cast<char*>(freedPtr) + freedSize;
-                
-                if (freedBlockEnd == lastBlockEnd) {
-                    memAtEnd += freedSize;  // Actualiza solo si es el último
-                }
-            } else {
-                // Si no hay nodos, este era el único bloque
-                memAtEnd += freedSize;
-            }
-        }
-        
-     
-
     public:
         MemoryBlock(size_t sizeMB){
             memSize = 256;
@@ -505,13 +484,20 @@ class MemoryBlock {
                 // Guardar información antes de liberar
                 size_t freedSize = block->size;
                 void* freedPtr = block->ptr;
+                bool wasLastBlock = (memList.getLast() && memList.getLast()->block.id == id); // Nueva línea
                 
                 // Liberar el bloque
                 if (memList.removeById(id)) {
                     std::cout << "[MemoryBlock] Bloque removido de la lista" << std::endl;
                     
-                    // Actualizar contadores de memoria
-                    UpdateMemoryOnFree(freedSize, freedPtr);
+                    // Actualizar contadores de memoria (versión mejorada)
+                    usedMem -= freedSize;
+                    
+                    if (wasLastBlock) {  // Nueva condición
+                        memAtEnd += freedSize;
+                        std::cout << "[MemoryBlock] Se liberó el último bloque. MemAtEnd actualizado a: " 
+                                  << memAtEnd << std::endl;
+                    }
                     
                     // Sugerir compactación si hay fragmentación
                     if (memAtEnd < freedSize) {

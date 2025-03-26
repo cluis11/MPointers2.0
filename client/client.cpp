@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <algorithm>
 #include <grpcpp/grpcpp.h>
 #include "../proto/memory_manager.grpc.pb.h"
 
@@ -12,6 +13,8 @@ using memorymanager::CreateRequest;
 using memorymanager::CreateResponse;
 using memorymanager::SetRequest;
 using memorymanager::SetResponse;
+using memorymanager::GetRequest;
+using memorymanager::GetResponse;
 using memorymanager::IncreaseRefCountRequest;
 using memorymanager::IncreaseRefCountResponse;
 using memorymanager::DecreaseRefCountRequest;
@@ -82,52 +85,108 @@ public:
         return status.ok() && response.success();
     }
 
-    void RunPreciseFragmentationTest() {
-        const size_t FLOAT_SIZE = sizeof(float); // 4 bytes
-        const size_t TOTAL_SPACE = 256; // Tamaño total controlado (ajustable)
+    // NUEVA FUNCIÓN: Obtener valor float de un bloque
+    float GetFloatValue(int id) {
+        GetRequest request;
+        request.set_id(id);
+
+        GetResponse response;
+        ClientContext context;
+
+        Status status = stub_->Get(&context, request, &response);
+
+        if (status.ok() && response.success()) {
+            if (response.has_float_value()) {
+                return response.float_value();
+            }
+        }
+        throw std::runtime_error("Failed to get value for block " + std::to_string(id));
+    }
+
+    void RunEnhancedFragmentationTest() {
+        const size_t FLOAT_SIZE = sizeof(float);
+        const size_t TOTAL_SPACE = 256;
+        std::vector<int> all_ids;
+        std::vector<int> active_ids;
+        size_t block_size = 4 * FLOAT_SIZE;
+
+        // 1. Llenar memoria inicial
+        std::cout << "\n=== Fase 1: Llenado inicial (" 
+                  << (TOTAL_SPACE/block_size) << " bloques de " 
+                  << block_size << " bytes) ===" << std::endl;
         
-        // 1. Llenar memoria con bloques de 4 floats (16 bytes)
-        std::vector<int> ids;
-        size_t block_size = 4 * FLOAT_SIZE; // 16 bytes
-        
-        std::cout << "\n=== Filling memory (" << TOTAL_SPACE << " bytes) ===" << std::endl;
         for (size_t i = 0; i < TOTAL_SPACE / block_size; i++) {
             int id = Create(block_size, "float");
             if (id != -1) {
                 SetFloat(id, 1.0f + i);
                 IncreaseRef(id);
-                ids.push_back(id);
+                all_ids.push_back(id);
+                active_ids.push_back(id);
+                std::cout << "  - Creado bloque ID: " << id << " con valor: " << 1.0f + i << std::endl;
             }
         }
 
-        // 2. Liberar bloques alternos para fragmentación
-        std::cout << "\n=== Creating fragmentation ===" << std::endl;
-        for (size_t i = 1; i < ids.size(); i += 2) {
-            std::cout << "Releasing block " << ids[i] << std::endl;
-            DecreaseRef(ids[i]);
+        // 2. Liberar bloques alternos
+        std::cout << "\n=== Fase 2: Liberar bloques alternos ===" << std::endl;
+        for (size_t i = 1; i < all_ids.size(); i += 2) {
+            std::cout << "Liberando bloque ID: " << all_ids[i] << std::endl;
+            if (DecreaseRef(all_ids[i])) {
+                active_ids.erase(std::remove(active_ids.begin(), active_ids.end(), all_ids[i]), 
+                                active_ids.end());
+            }
         }
 
-        // 3. Intentar reutilizar espacio con bloque pequeño (1 float = 4 bytes)
-        std::cout << "\n=== Testing small block (4B) ===" << std::endl;
+        // 3. Asignar bloque pequeño
+        std::cout << "\n=== Fase 3: Asignar bloque pequeño (4B) ===" << std::endl;
         int small_id = Create(FLOAT_SIZE, "float");
         if (small_id != -1) {
             SetFloat(small_id, 99.9f);
             IncreaseRef(small_id);
+            active_ids.push_back(small_id);
+            std::cout << "  - Creado bloque pequeño ID: " << small_id << " con valor: 99.9" << std::endl;
         }
 
-        // 4. Intentar bloque grande (8 floats = 32 bytes)
-        std::cout << "\n=== Testing large block (32B) ===" << std::endl;
+        // 4. Intentar bloque grande
+        std::cout << "\n=== Fase 4: Intentar bloque grande (32B) ===" << std::endl;
         int large_id = Create(8 * FLOAT_SIZE, "float");
         if (large_id != -1) {
             SetFloat(large_id, 999.9f);
             IncreaseRef(large_id);
+            active_ids.push_back(large_id);
+            std::cout << "  - ¡Éxito! Bloque grande ID: " << large_id << " con valor: 999.9" << std::endl;
         } else {
-            std::cout << "Large block failed (expected without defrag)" << std::endl;
+            std::cout << "  - Fallo esperado (sin compactación)" << std::endl;
         }
+
+        // 5. Verificación final con GET
+        VerifyFinalBlocks(active_ids);
     }
 
 private:
     std::unique_ptr<MemoryManager::Stub> stub_;
+
+    void VerifyFinalBlocks(const std::vector<int>& active_ids) {
+        std::cout << "\n=== VERIFICACIÓN FINAL CON GET ===" << std::endl;
+        std::cout << "Obteniendo valores de los bloques activos:" << std::endl;
+        
+        for (int id : active_ids) {
+            try {
+                float value = GetFloatValue(id);
+                std::cout << "  - Bloque ID: " << id << " contiene valor: " << value << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "  - Error en bloque " << id << ": " << e.what() << std::endl;
+            }
+        }
+
+        // Reporte adicional
+        std::cout << "\n=== RESUMEN FINAL ===" << std::endl;
+        std::cout << "Total bloques activos: " << active_ids.size() << std::endl;
+        std::cout << "IDs activos: ";
+        for (int id : active_ids) {
+            std::cout << id << " ";
+        }
+        std::cout << std::endl;
+    }
 };
 
 int main(int argc, char** argv) {
@@ -135,11 +194,13 @@ int main(int argc, char** argv) {
         grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials())
     );
 
-    std::cout << "=== Memory Fragmentation Test ===" << std::endl;
-    std::cout << "Using controlled malloc size: 256 bytes" << std::endl;
-    std::cout << "Float size: " << sizeof(float) << " bytes" << std::endl;
+    std::cout << "=== Test de Fragmentación de Memoria ==="
+              << "\nConfiguración:"
+              << "\n- Tamaño total: 256 bytes"
+              << "\n- Tamaño de float: " << sizeof(float) << " bytes"
+              << std::endl;
 
-    client.RunPreciseFragmentationTest();
+    client.RunEnhancedFragmentationTest();
 
     return 0;
 }
