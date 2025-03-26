@@ -1,7 +1,6 @@
 #include <iostream>
 #include <memory>
-#include <string>
-
+#include <vector>
 #include <grpcpp/grpcpp.h>
 #include "../proto/memory_manager.grpc.pb.h"
 
@@ -13,20 +12,17 @@ using memorymanager::CreateRequest;
 using memorymanager::CreateResponse;
 using memorymanager::SetRequest;
 using memorymanager::SetResponse;
-using memorymanager::GetRequest;
-using memorymanager::GetResponse;
 using memorymanager::IncreaseRefCountRequest;
 using memorymanager::IncreaseRefCountResponse;
 using memorymanager::DecreaseRefCountRequest;
 using memorymanager::DecreaseRefCountResponse;
 
-class MemoryManagerClient {
+class MemoryTestClient {
 public:
-    MemoryManagerClient(std::shared_ptr<Channel> channel)
+    MemoryTestClient(std::shared_ptr<Channel> channel) 
         : stub_(MemoryManager::NewStub(channel)) {}
 
-    // Método para crear un bloque de memoria
-    int Create(int size, const std::string& type) {
+    int Create(size_t size, const std::string& type) {
         CreateRequest request;
         request.set_size(size);
         request.set_type(type);
@@ -34,63 +30,37 @@ public:
         CreateResponse response;
         ClientContext context;
 
+        std::cout << "Creating block - Size: " << size << " Type: " << type << std::endl;
+
         Status status = stub_->Create(&context, request, &response);
 
-        if (status.ok()) {
-            if (response.success()) {
-                return response.id();
-            } else {
-                std::cerr << "Error: No se pudo crear el bloque de memoria." << std::endl;
-            }
+        if (status.ok() && response.success()) {
+            std::cout << "Created ID: " << response.id() << std::endl;
+            return response.id();
         } else {
-            std::cerr << "Error en la llamada RPC: " << status.error_message() << std::endl;
+            std::cerr << "Create failed" << std::endl;
+            return -1;
         }
-        return -1; // Indica un error
     }
 
-    // Método para asignar un valor a un bloque de memoria
-    bool Set(int id, int value) {
+    bool SetFloat(int id, float value) {
         SetRequest request;
         request.set_id(id);
-        request.set_int_value(value);
+        request.set_float_value(value);
 
         SetResponse response;
         ClientContext context;
 
         Status status = stub_->Set(&context, request, &response);
 
-        if (status.ok()) {
-            return response.success();
-        } else {
-            std::cerr << "Error en la llamada RPC: " << status.error_message() << std::endl;
-            return false;
+        if (status.ok() && response.success()) {
+            std::cout << "Set ID " << id << " = " << value << std::endl;
+            return true;
         }
+        return false;
     }
 
-    // Método para obtener el valor de un bloque de memoria
-    int Get(int id) {
-        GetRequest request;
-        request.set_id(id);
-
-        GetResponse response;
-        ClientContext context;
-
-        Status status = stub_->Get(&context, request, &response);
-
-        if (status.ok()) {
-            if (response.success()) {
-                return response.int_value();
-            } else {
-                std::cerr << "Error: No se pudo obtener el valor del bloque de memoria." << std::endl;
-            }
-        } else {
-            std::cerr << "Error en la llamada RPC: " << status.error_message() << std::endl;
-        }
-        return -1; // Indica un error
-    }
-
-    // Método para incrementar el conteo de referencias
-    bool IncreaseRefCount(int id) {
+    bool IncreaseRef(int id) {
         IncreaseRefCountRequest request;
         request.set_id(id);
 
@@ -98,17 +68,10 @@ public:
         ClientContext context;
 
         Status status = stub_->IncreaseRefCount(&context, request, &response);
-
-        if (status.ok()) {
-            return response.success();
-        } else {
-            std::cerr << "Error en la llamada RPC: " << status.error_message() << std::endl;
-            return false;
-        }
+        return status.ok() && response.success();
     }
 
-    // Método para decrementar el conteo de referencias
-    bool DecreaseRefCount(int id) {
+    bool DecreaseRef(int id) {
         DecreaseRefCountRequest request;
         request.set_id(id);
 
@@ -116,12 +79,50 @@ public:
         ClientContext context;
 
         Status status = stub_->DecreaseRefCount(&context, request, &response);
+        return status.ok() && response.success();
+    }
 
-        if (status.ok()) {
-            return response.success();
+    void RunPreciseFragmentationTest() {
+        const size_t FLOAT_SIZE = sizeof(float); // 4 bytes
+        const size_t TOTAL_SPACE = 256; // Tamaño total controlado (ajustable)
+        
+        // 1. Llenar memoria con bloques de 4 floats (16 bytes)
+        std::vector<int> ids;
+        size_t block_size = 4 * FLOAT_SIZE; // 16 bytes
+        
+        std::cout << "\n=== Filling memory (" << TOTAL_SPACE << " bytes) ===" << std::endl;
+        for (size_t i = 0; i < TOTAL_SPACE / block_size; i++) {
+            int id = Create(block_size, "float");
+            if (id != -1) {
+                SetFloat(id, 1.0f + i);
+                IncreaseRef(id);
+                ids.push_back(id);
+            }
+        }
+
+        // 2. Liberar bloques alternos para fragmentación
+        std::cout << "\n=== Creating fragmentation ===" << std::endl;
+        for (size_t i = 1; i < ids.size(); i += 2) {
+            std::cout << "Releasing block " << ids[i] << std::endl;
+            DecreaseRef(ids[i]);
+        }
+
+        // 3. Intentar reutilizar espacio con bloque pequeño (1 float = 4 bytes)
+        std::cout << "\n=== Testing small block (4B) ===" << std::endl;
+        int small_id = Create(FLOAT_SIZE, "float");
+        if (small_id != -1) {
+            SetFloat(small_id, 99.9f);
+            IncreaseRef(small_id);
+        }
+
+        // 4. Intentar bloque grande (8 floats = 32 bytes)
+        std::cout << "\n=== Testing large block (32B) ===" << std::endl;
+        int large_id = Create(8 * FLOAT_SIZE, "float");
+        if (large_id != -1) {
+            SetFloat(large_id, 999.9f);
+            IncreaseRef(large_id);
         } else {
-            std::cerr << "Error en la llamada RPC: " << status.error_message() << std::endl;
-            return false;
+            std::cout << "Large block failed (expected without defrag)" << std::endl;
         }
     }
 
@@ -129,41 +130,16 @@ private:
     std::unique_ptr<MemoryManager::Stub> stub_;
 };
 
-int main() {
-    // Dirección del servidor
-    std::string server_address("localhost:50051");
-
-    // Crea el cliente
-    MemoryManagerClient client(
-        grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials())
+int main(int argc, char** argv) {
+    MemoryTestClient client(
+        grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials())
     );
 
-    // Prueba el método Create
-    int block_id = client.Create(4, "int");
-    if (block_id != -1) {
-        std::cout << "Bloque de memoria creado con ID: " << block_id << std::endl;
+    std::cout << "=== Memory Fragmentation Test ===" << std::endl;
+    std::cout << "Using controlled malloc size: 256 bytes" << std::endl;
+    std::cout << "Float size: " << sizeof(float) << " bytes" << std::endl;
 
-        // Prueba el método Set
-        if (client.Set(block_id, 42)) {
-            std::cout << "Valor asignado correctamente." << std::endl;
-
-            // Prueba el método Get
-            int value = client.Get(block_id);
-            if (value != -1) {
-                std::cout << "Valor obtenido: " << value << std::endl;
-            }
-
-            // Prueba el método IncreaseRefCount
-            if (client.IncreaseRefCount(block_id)) {
-                std::cout << "Conteo de referencias incrementado." << std::endl;
-            }
-
-            // Prueba el método DecreaseRefCount
-            if (client.DecreaseRefCount(block_id)) {
-                std::cout << "Conteo de referencias decrementado." << std::endl;
-            }
-        }
-    }
+    client.RunPreciseFragmentationTest();
 
     return 0;
 }
