@@ -152,15 +152,9 @@ int main() {
             if (value != -1) {
                 std::cout << "Valor obtenido: " << value << std::endl;
             }
-
             // Prueba el método IncreaseRefCount
             if (client.IncreaseRefCount(block_id)) {
                 std::cout << "Conteo de referencias incrementado." << std::endl;
-            }
-
-            // Prueba el método DecreaseRefCount
-            if (client.DecreaseRefCount(block_id)) {
-                std::cout << "Conteo de referencias decrementado." << std::endl;
             }
             if (client.Set(block_id, 12)) {
                 std::cout << "Valor asignado correctamente." << std::endl;
@@ -181,20 +175,32 @@ int main() {
             if (value != -1) {
                 std::cout << "Valor obtenido: " << value << std::endl;
             }
-
-            // Prueba el método IncreaseRefCount
-            /*if (client.IncreaseRefCount(block_id)) {
-                std::cout << "Conteo de referencias incrementado." << std::endl;
-            }*/
-
-            // Prueba el método DecreaseRefCount
-            if (client.DecreaseRefCount(block_id)) {
+            
+            //Prueba metodo DecreaseRefCount
+            if (client.DecreaseRefCount(block_id2)) {
                 std::cout << "Conteo de referencias decrementado." << std::endl;
-            }
-            if (client.Set(block_id, 12)) {
-                std::cout << "Valor asignado correctamente." << std::endl;
             }
         }
     }
+
+    //int block_id3 = client.Create(4, "int");
+    //if (block_id3 != -1) {
+    //    std::cout << "Bloque de memoria creado con ID: " << block_id3 << std::endl;
+
+    //    // Prueba el método Set
+    //    if (client.Set(block_id3, 200)) {
+    //        std::cout << "Valor asignado correctamente." << std::endl;
+
+    //        // Prueba el método Get
+    //        int value = client.Get(block_id3);
+    //        if (value != -1) {
+    //            std::cout << "Valor obtenido: " << value << std::endl;
+    //        }
+    //        // Prueba el método IncreaseRefCount
+    //        if (client.IncreaseRefCount(block_id3)) {
+    //            std::cout << "Conteo de referencias incrementado." << std::endl;
+    //        }
+    //    }
+    //}
     return 0;
 }

@@ -77,6 +77,7 @@ private:
     std::mutex mtx;
 
 public:
+
     MemoryList() : head(nullptr) {}
 
     ~MemoryList() {
@@ -129,7 +130,7 @@ public:
                 else {
                     previous->next = current->next;
                 }
-                delete static_cast<char*>(current->block.ptr);
+                //delete static_cast<char*>(current->block.ptr);
                 delete current;
                 return true;
             }
@@ -343,9 +344,11 @@ class GarbageCollector {
 private:
     MemoryList& memList;
     std::atomic<bool> running;
+    Dumps dumps;
+    std::mutex gcMutex;
 
 public:
-    GarbageCollector(MemoryList& memlist) : memList(memlist), running(true) {}
+    GarbageCollector(MemoryList& memlist1, const string& dumpFolder) : memList(memlist1), running(true), dumps(dumpFolder, memlist1) {}
 
     void Stop() {
         running = false;
@@ -355,7 +358,9 @@ public:
         cout << "Iniciando Garbage Collector..." << std::endl;
 
         while (running) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+            std::lock_guard<std::mutex> lock(gcMutex);
 
             Node* current = memList.getHead();
             Node* previus = nullptr;
@@ -374,8 +379,10 @@ public:
                     {
                         memList.setHead(current);
                     }
-                    delete static_cast<char*>(toDelete->block.ptr);
+                    //delete static_cast<char*>(toDelete->block.ptr);
+                    
                     delete toDelete;
+                    dumps.CreateDump();
                 }
                 else {
                     previus = current;
@@ -476,7 +483,7 @@ private:
 void RunServer(const std::string& listenPort, size_t memSize, std::string folder) {
     MemoryBlock memoryBlock(memSize, folder); // Inicializa el MemoryBlock con el tamaño especificado
 
-    GarbageCollector gc(memoryBlock.GetMemoryList());
+    GarbageCollector gc(memoryBlock.GetMemoryList(), folder);
     std::thread gcTh([&gc]() { gc.Search(); });
 
     MemoryManagerServiceImpl service(memoryBlock);
