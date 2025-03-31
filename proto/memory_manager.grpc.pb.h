@@ -35,7 +35,7 @@ class MemoryManager final {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
-    // Crea un bloque de memoria y retorna un ID
+    // Operaciones básicas de MPointers
     virtual ::grpc::Status Create(::grpc::ClientContext* context, const ::memorymanager::CreateRequest& request, ::memorymanager::CreateResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateResponse>> AsyncCreate(::grpc::ClientContext* context, const ::memorymanager::CreateRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateResponse>>(AsyncCreateRaw(context, request, cq));
@@ -43,7 +43,6 @@ class MemoryManager final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateResponse>> PrepareAsyncCreate(::grpc::ClientContext* context, const ::memorymanager::CreateRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateResponse>>(PrepareAsyncCreateRaw(context, request, cq));
     }
-    // Asigna un valor a un bloque de memoria
     virtual ::grpc::Status Set(::grpc::ClientContext* context, const ::memorymanager::SetRequest& request, ::memorymanager::SetResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::SetResponse>> AsyncSet(::grpc::ClientContext* context, const ::memorymanager::SetRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::SetResponse>>(AsyncSetRaw(context, request, cq));
@@ -51,7 +50,6 @@ class MemoryManager final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::SetResponse>> PrepareAsyncSet(::grpc::ClientContext* context, const ::memorymanager::SetRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::SetResponse>>(PrepareAsyncSetRaw(context, request, cq));
     }
-    // Obtiene el valor de un bloque de memoria
     virtual ::grpc::Status Get(::grpc::ClientContext* context, const ::memorymanager::GetRequest& request, ::memorymanager::GetResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetResponse>> AsyncGet(::grpc::ClientContext* context, const ::memorymanager::GetRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetResponse>>(AsyncGetRaw(context, request, cq));
@@ -59,7 +57,6 @@ class MemoryManager final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetResponse>> PrepareAsyncGet(::grpc::ClientContext* context, const ::memorymanager::GetRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetResponse>>(PrepareAsyncGetRaw(context, request, cq));
     }
-    // Incrementa el conteo de referencias de un bloque de memoria
     virtual ::grpc::Status IncreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::IncreaseRefCountRequest& request, ::memorymanager::IncreaseRefCountResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::IncreaseRefCountResponse>> AsyncIncreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::IncreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::IncreaseRefCountResponse>>(AsyncIncreaseRefCountRaw(context, request, cq));
@@ -67,7 +64,6 @@ class MemoryManager final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::IncreaseRefCountResponse>> PrepareAsyncIncreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::IncreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::IncreaseRefCountResponse>>(PrepareAsyncIncreaseRefCountRaw(context, request, cq));
     }
-    // Decrementa el conteo de referencias de un bloque de memoria
     virtual ::grpc::Status DecreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest& request, ::memorymanager::DecreaseRefCountResponse* response) = 0;
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::DecreaseRefCountResponse>> AsyncDecreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::DecreaseRefCountResponse>>(AsyncDecreaseRefCountRaw(context, request, cq));
@@ -75,24 +71,49 @@ class MemoryManager final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::DecreaseRefCountResponse>> PrepareAsyncDecreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::DecreaseRefCountResponse>>(PrepareAsyncDecreaseRefCountRaw(context, request, cq));
     }
+    // Operaciones específicas para lista enlazada
+    virtual ::grpc::Status CreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::memorymanager::CreateNodeResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateNodeResponse>> AsyncCreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateNodeResponse>>(AsyncCreateNodeRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateNodeResponse>> PrepareAsyncCreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateNodeResponse>>(PrepareAsyncCreateNodeRaw(context, request, cq));
+    }
+    virtual ::grpc::Status GetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::memorymanager::GetNodeResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetNodeResponse>> AsyncGetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetNodeResponse>>(AsyncGetNodeRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetNodeResponse>> PrepareAsyncGetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetNodeResponse>>(PrepareAsyncGetNodeRaw(context, request, cq));
+    }
+    virtual ::grpc::Status UpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::memorymanager::UpdateNodeResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::UpdateNodeResponse>> AsyncUpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::UpdateNodeResponse>>(AsyncUpdateNodeRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::UpdateNodeResponse>> PrepareAsyncUpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::UpdateNodeResponse>>(PrepareAsyncUpdateNodeRaw(context, request, cq));
+    }
     class async_interface {
      public:
       virtual ~async_interface() {}
-      // Crea un bloque de memoria y retorna un ID
+      // Operaciones básicas de MPointers
       virtual void Create(::grpc::ClientContext* context, const ::memorymanager::CreateRequest* request, ::memorymanager::CreateResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Create(::grpc::ClientContext* context, const ::memorymanager::CreateRequest* request, ::memorymanager::CreateResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      // Asigna un valor a un bloque de memoria
       virtual void Set(::grpc::ClientContext* context, const ::memorymanager::SetRequest* request, ::memorymanager::SetResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Set(::grpc::ClientContext* context, const ::memorymanager::SetRequest* request, ::memorymanager::SetResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      // Obtiene el valor de un bloque de memoria
       virtual void Get(::grpc::ClientContext* context, const ::memorymanager::GetRequest* request, ::memorymanager::GetResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Get(::grpc::ClientContext* context, const ::memorymanager::GetRequest* request, ::memorymanager::GetResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      // Incrementa el conteo de referencias de un bloque de memoria
       virtual void IncreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::IncreaseRefCountRequest* request, ::memorymanager::IncreaseRefCountResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void IncreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::IncreaseRefCountRequest* request, ::memorymanager::IncreaseRefCountResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      // Decrementa el conteo de referencias de un bloque de memoria
       virtual void DecreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest* request, ::memorymanager::DecreaseRefCountResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void DecreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest* request, ::memorymanager::DecreaseRefCountResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      // Operaciones específicas para lista enlazada
+      virtual void CreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest* request, ::memorymanager::CreateNodeResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void CreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest* request, ::memorymanager::CreateNodeResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void GetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest* request, ::memorymanager::GetNodeResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest* request, ::memorymanager::GetNodeResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void UpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest* request, ::memorymanager::UpdateNodeResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void UpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest* request, ::memorymanager::UpdateNodeResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
@@ -108,6 +129,12 @@ class MemoryManager final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::IncreaseRefCountResponse>* PrepareAsyncIncreaseRefCountRaw(::grpc::ClientContext* context, const ::memorymanager::IncreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::DecreaseRefCountResponse>* AsyncDecreaseRefCountRaw(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::DecreaseRefCountResponse>* PrepareAsyncDecreaseRefCountRaw(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateNodeResponse>* AsyncCreateNodeRaw(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::CreateNodeResponse>* PrepareAsyncCreateNodeRaw(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetNodeResponse>* AsyncGetNodeRaw(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::GetNodeResponse>* PrepareAsyncGetNodeRaw(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::UpdateNodeResponse>* AsyncUpdateNodeRaw(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::memorymanager::UpdateNodeResponse>* PrepareAsyncUpdateNodeRaw(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -147,6 +174,27 @@ class MemoryManager final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::DecreaseRefCountResponse>> PrepareAsyncDecreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::DecreaseRefCountResponse>>(PrepareAsyncDecreaseRefCountRaw(context, request, cq));
     }
+    ::grpc::Status CreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::memorymanager::CreateNodeResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::CreateNodeResponse>> AsyncCreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::CreateNodeResponse>>(AsyncCreateNodeRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::CreateNodeResponse>> PrepareAsyncCreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::CreateNodeResponse>>(PrepareAsyncCreateNodeRaw(context, request, cq));
+    }
+    ::grpc::Status GetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::memorymanager::GetNodeResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::GetNodeResponse>> AsyncGetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::GetNodeResponse>>(AsyncGetNodeRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::GetNodeResponse>> PrepareAsyncGetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::GetNodeResponse>>(PrepareAsyncGetNodeRaw(context, request, cq));
+    }
+    ::grpc::Status UpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::memorymanager::UpdateNodeResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::UpdateNodeResponse>> AsyncUpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::UpdateNodeResponse>>(AsyncUpdateNodeRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::UpdateNodeResponse>> PrepareAsyncUpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::memorymanager::UpdateNodeResponse>>(PrepareAsyncUpdateNodeRaw(context, request, cq));
+    }
     class async final :
       public StubInterface::async_interface {
      public:
@@ -160,6 +208,12 @@ class MemoryManager final {
       void IncreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::IncreaseRefCountRequest* request, ::memorymanager::IncreaseRefCountResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void DecreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest* request, ::memorymanager::DecreaseRefCountResponse* response, std::function<void(::grpc::Status)>) override;
       void DecreaseRefCount(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest* request, ::memorymanager::DecreaseRefCountResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void CreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest* request, ::memorymanager::CreateNodeResponse* response, std::function<void(::grpc::Status)>) override;
+      void CreateNode(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest* request, ::memorymanager::CreateNodeResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest* request, ::memorymanager::GetNodeResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetNode(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest* request, ::memorymanager::GetNodeResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void UpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest* request, ::memorymanager::UpdateNodeResponse* response, std::function<void(::grpc::Status)>) override;
+      void UpdateNode(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest* request, ::memorymanager::UpdateNodeResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -181,11 +235,20 @@ class MemoryManager final {
     ::grpc::ClientAsyncResponseReader< ::memorymanager::IncreaseRefCountResponse>* PrepareAsyncIncreaseRefCountRaw(::grpc::ClientContext* context, const ::memorymanager::IncreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::memorymanager::DecreaseRefCountResponse>* AsyncDecreaseRefCountRaw(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::memorymanager::DecreaseRefCountResponse>* PrepareAsyncDecreaseRefCountRaw(::grpc::ClientContext* context, const ::memorymanager::DecreaseRefCountRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::memorymanager::CreateNodeResponse>* AsyncCreateNodeRaw(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::memorymanager::CreateNodeResponse>* PrepareAsyncCreateNodeRaw(::grpc::ClientContext* context, const ::memorymanager::CreateNodeRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::memorymanager::GetNodeResponse>* AsyncGetNodeRaw(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::memorymanager::GetNodeResponse>* PrepareAsyncGetNodeRaw(::grpc::ClientContext* context, const ::memorymanager::GetNodeRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::memorymanager::UpdateNodeResponse>* AsyncUpdateNodeRaw(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::memorymanager::UpdateNodeResponse>* PrepareAsyncUpdateNodeRaw(::grpc::ClientContext* context, const ::memorymanager::UpdateNodeRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_Create_;
     const ::grpc::internal::RpcMethod rpcmethod_Set_;
     const ::grpc::internal::RpcMethod rpcmethod_Get_;
     const ::grpc::internal::RpcMethod rpcmethod_IncreaseRefCount_;
     const ::grpc::internal::RpcMethod rpcmethod_DecreaseRefCount_;
+    const ::grpc::internal::RpcMethod rpcmethod_CreateNode_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetNode_;
+    const ::grpc::internal::RpcMethod rpcmethod_UpdateNode_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -193,16 +256,16 @@ class MemoryManager final {
    public:
     Service();
     virtual ~Service();
-    // Crea un bloque de memoria y retorna un ID
+    // Operaciones básicas de MPointers
     virtual ::grpc::Status Create(::grpc::ServerContext* context, const ::memorymanager::CreateRequest* request, ::memorymanager::CreateResponse* response);
-    // Asigna un valor a un bloque de memoria
     virtual ::grpc::Status Set(::grpc::ServerContext* context, const ::memorymanager::SetRequest* request, ::memorymanager::SetResponse* response);
-    // Obtiene el valor de un bloque de memoria
     virtual ::grpc::Status Get(::grpc::ServerContext* context, const ::memorymanager::GetRequest* request, ::memorymanager::GetResponse* response);
-    // Incrementa el conteo de referencias de un bloque de memoria
     virtual ::grpc::Status IncreaseRefCount(::grpc::ServerContext* context, const ::memorymanager::IncreaseRefCountRequest* request, ::memorymanager::IncreaseRefCountResponse* response);
-    // Decrementa el conteo de referencias de un bloque de memoria
     virtual ::grpc::Status DecreaseRefCount(::grpc::ServerContext* context, const ::memorymanager::DecreaseRefCountRequest* request, ::memorymanager::DecreaseRefCountResponse* response);
+    // Operaciones específicas para lista enlazada
+    virtual ::grpc::Status CreateNode(::grpc::ServerContext* context, const ::memorymanager::CreateNodeRequest* request, ::memorymanager::CreateNodeResponse* response);
+    virtual ::grpc::Status GetNode(::grpc::ServerContext* context, const ::memorymanager::GetNodeRequest* request, ::memorymanager::GetNodeResponse* response);
+    virtual ::grpc::Status UpdateNode(::grpc::ServerContext* context, const ::memorymanager::UpdateNodeRequest* request, ::memorymanager::UpdateNodeResponse* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_Create : public BaseClass {
@@ -304,7 +367,67 @@ class MemoryManager final {
       ::grpc::Service::RequestAsyncUnary(4, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_Create<WithAsyncMethod_Set<WithAsyncMethod_Get<WithAsyncMethod_IncreaseRefCount<WithAsyncMethod_DecreaseRefCount<Service > > > > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_CreateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_CreateNode() {
+      ::grpc::Service::MarkMethodAsync(5);
+    }
+    ~WithAsyncMethod_CreateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::CreateNodeRequest* /*request*/, ::memorymanager::CreateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestCreateNode(::grpc::ServerContext* context, ::memorymanager::CreateNodeRequest* request, ::grpc::ServerAsyncResponseWriter< ::memorymanager::CreateNodeResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(5, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_GetNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_GetNode() {
+      ::grpc::Service::MarkMethodAsync(6);
+    }
+    ~WithAsyncMethod_GetNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNode(::grpc::ServerContext* /*context*/, const ::memorymanager::GetNodeRequest* /*request*/, ::memorymanager::GetNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetNode(::grpc::ServerContext* context, ::memorymanager::GetNodeRequest* request, ::grpc::ServerAsyncResponseWriter< ::memorymanager::GetNodeResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(6, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithAsyncMethod_UpdateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_UpdateNode() {
+      ::grpc::Service::MarkMethodAsync(7);
+    }
+    ~WithAsyncMethod_UpdateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::UpdateNodeRequest* /*request*/, ::memorymanager::UpdateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateNode(::grpc::ServerContext* context, ::memorymanager::UpdateNodeRequest* request, ::grpc::ServerAsyncResponseWriter< ::memorymanager::UpdateNodeResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_Create<WithAsyncMethod_Set<WithAsyncMethod_Get<WithAsyncMethod_IncreaseRefCount<WithAsyncMethod_DecreaseRefCount<WithAsyncMethod_CreateNode<WithAsyncMethod_GetNode<WithAsyncMethod_UpdateNode<Service > > > > > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_Create : public BaseClass {
    private:
@@ -440,7 +563,88 @@ class MemoryManager final {
     virtual ::grpc::ServerUnaryReactor* DecreaseRefCount(
       ::grpc::CallbackServerContext* /*context*/, const ::memorymanager::DecreaseRefCountRequest* /*request*/, ::memorymanager::DecreaseRefCountResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_Create<WithCallbackMethod_Set<WithCallbackMethod_Get<WithCallbackMethod_IncreaseRefCount<WithCallbackMethod_DecreaseRefCount<Service > > > > > CallbackService;
+  template <class BaseClass>
+  class WithCallbackMethod_CreateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_CreateNode() {
+      ::grpc::Service::MarkMethodCallback(5,
+          new ::grpc::internal::CallbackUnaryHandler< ::memorymanager::CreateNodeRequest, ::memorymanager::CreateNodeResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::memorymanager::CreateNodeRequest* request, ::memorymanager::CreateNodeResponse* response) { return this->CreateNode(context, request, response); }));}
+    void SetMessageAllocatorFor_CreateNode(
+        ::grpc::MessageAllocator< ::memorymanager::CreateNodeRequest, ::memorymanager::CreateNodeResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(5);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::memorymanager::CreateNodeRequest, ::memorymanager::CreateNodeResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_CreateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::CreateNodeRequest* /*request*/, ::memorymanager::CreateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* CreateNode(
+      ::grpc::CallbackServerContext* /*context*/, const ::memorymanager::CreateNodeRequest* /*request*/, ::memorymanager::CreateNodeResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_GetNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_GetNode() {
+      ::grpc::Service::MarkMethodCallback(6,
+          new ::grpc::internal::CallbackUnaryHandler< ::memorymanager::GetNodeRequest, ::memorymanager::GetNodeResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::memorymanager::GetNodeRequest* request, ::memorymanager::GetNodeResponse* response) { return this->GetNode(context, request, response); }));}
+    void SetMessageAllocatorFor_GetNode(
+        ::grpc::MessageAllocator< ::memorymanager::GetNodeRequest, ::memorymanager::GetNodeResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(6);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::memorymanager::GetNodeRequest, ::memorymanager::GetNodeResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_GetNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNode(::grpc::ServerContext* /*context*/, const ::memorymanager::GetNodeRequest* /*request*/, ::memorymanager::GetNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetNode(
+      ::grpc::CallbackServerContext* /*context*/, const ::memorymanager::GetNodeRequest* /*request*/, ::memorymanager::GetNodeResponse* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithCallbackMethod_UpdateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_UpdateNode() {
+      ::grpc::Service::MarkMethodCallback(7,
+          new ::grpc::internal::CallbackUnaryHandler< ::memorymanager::UpdateNodeRequest, ::memorymanager::UpdateNodeResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::memorymanager::UpdateNodeRequest* request, ::memorymanager::UpdateNodeResponse* response) { return this->UpdateNode(context, request, response); }));}
+    void SetMessageAllocatorFor_UpdateNode(
+        ::grpc::MessageAllocator< ::memorymanager::UpdateNodeRequest, ::memorymanager::UpdateNodeResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(7);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::memorymanager::UpdateNodeRequest, ::memorymanager::UpdateNodeResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_UpdateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::UpdateNodeRequest* /*request*/, ::memorymanager::UpdateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateNode(
+      ::grpc::CallbackServerContext* /*context*/, const ::memorymanager::UpdateNodeRequest* /*request*/, ::memorymanager::UpdateNodeResponse* /*response*/)  { return nullptr; }
+  };
+  typedef WithCallbackMethod_Create<WithCallbackMethod_Set<WithCallbackMethod_Get<WithCallbackMethod_IncreaseRefCount<WithCallbackMethod_DecreaseRefCount<WithCallbackMethod_CreateNode<WithCallbackMethod_GetNode<WithCallbackMethod_UpdateNode<Service > > > > > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_Create : public BaseClass {
@@ -523,6 +727,57 @@ class MemoryManager final {
     }
     // disable synchronous version of this method
     ::grpc::Status DecreaseRefCount(::grpc::ServerContext* /*context*/, const ::memorymanager::DecreaseRefCountRequest* /*request*/, ::memorymanager::DecreaseRefCountResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_CreateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_CreateNode() {
+      ::grpc::Service::MarkMethodGeneric(5);
+    }
+    ~WithGenericMethod_CreateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::CreateNodeRequest* /*request*/, ::memorymanager::CreateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_GetNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_GetNode() {
+      ::grpc::Service::MarkMethodGeneric(6);
+    }
+    ~WithGenericMethod_GetNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNode(::grpc::ServerContext* /*context*/, const ::memorymanager::GetNodeRequest* /*request*/, ::memorymanager::GetNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_UpdateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_UpdateNode() {
+      ::grpc::Service::MarkMethodGeneric(7);
+    }
+    ~WithGenericMethod_UpdateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::UpdateNodeRequest* /*request*/, ::memorymanager::UpdateNodeResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -625,6 +880,66 @@ class MemoryManager final {
     }
     void RequestDecreaseRefCount(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(4, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_CreateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_CreateNode() {
+      ::grpc::Service::MarkMethodRaw(5);
+    }
+    ~WithRawMethod_CreateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::CreateNodeRequest* /*request*/, ::memorymanager::CreateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestCreateNode(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(5, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_GetNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_GetNode() {
+      ::grpc::Service::MarkMethodRaw(6);
+    }
+    ~WithRawMethod_GetNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNode(::grpc::ServerContext* /*context*/, const ::memorymanager::GetNodeRequest* /*request*/, ::memorymanager::GetNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetNode(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(6, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_UpdateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_UpdateNode() {
+      ::grpc::Service::MarkMethodRaw(7);
+    }
+    ~WithRawMethod_UpdateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::UpdateNodeRequest* /*request*/, ::memorymanager::UpdateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestUpdateNode(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(7, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -735,6 +1050,72 @@ class MemoryManager final {
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     virtual ::grpc::ServerUnaryReactor* DecreaseRefCount(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_CreateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_CreateNode() {
+      ::grpc::Service::MarkMethodRawCallback(5,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->CreateNode(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_CreateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CreateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::CreateNodeRequest* /*request*/, ::memorymanager::CreateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* CreateNode(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_GetNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_GetNode() {
+      ::grpc::Service::MarkMethodRawCallback(6,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetNode(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_GetNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetNode(::grpc::ServerContext* /*context*/, const ::memorymanager::GetNodeRequest* /*request*/, ::memorymanager::GetNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetNode(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_UpdateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_UpdateNode() {
+      ::grpc::Service::MarkMethodRawCallback(7,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->UpdateNode(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_UpdateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status UpdateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::UpdateNodeRequest* /*request*/, ::memorymanager::UpdateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* UpdateNode(
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
@@ -872,9 +1253,90 @@ class MemoryManager final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedDecreaseRefCount(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::memorymanager::DecreaseRefCountRequest,::memorymanager::DecreaseRefCountResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_Create<WithStreamedUnaryMethod_Set<WithStreamedUnaryMethod_Get<WithStreamedUnaryMethod_IncreaseRefCount<WithStreamedUnaryMethod_DecreaseRefCount<Service > > > > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_CreateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_CreateNode() {
+      ::grpc::Service::MarkMethodStreamed(5,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::memorymanager::CreateNodeRequest, ::memorymanager::CreateNodeResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::memorymanager::CreateNodeRequest, ::memorymanager::CreateNodeResponse>* streamer) {
+                       return this->StreamedCreateNode(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_CreateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status CreateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::CreateNodeRequest* /*request*/, ::memorymanager::CreateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedCreateNode(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::memorymanager::CreateNodeRequest,::memorymanager::CreateNodeResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_GetNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_GetNode() {
+      ::grpc::Service::MarkMethodStreamed(6,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::memorymanager::GetNodeRequest, ::memorymanager::GetNodeResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::memorymanager::GetNodeRequest, ::memorymanager::GetNodeResponse>* streamer) {
+                       return this->StreamedGetNode(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_GetNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetNode(::grpc::ServerContext* /*context*/, const ::memorymanager::GetNodeRequest* /*request*/, ::memorymanager::GetNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetNode(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::memorymanager::GetNodeRequest,::memorymanager::GetNodeResponse>* server_unary_streamer) = 0;
+  };
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_UpdateNode : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_UpdateNode() {
+      ::grpc::Service::MarkMethodStreamed(7,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::memorymanager::UpdateNodeRequest, ::memorymanager::UpdateNodeResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::memorymanager::UpdateNodeRequest, ::memorymanager::UpdateNodeResponse>* streamer) {
+                       return this->StreamedUpdateNode(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_UpdateNode() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status UpdateNode(::grpc::ServerContext* /*context*/, const ::memorymanager::UpdateNodeRequest* /*request*/, ::memorymanager::UpdateNodeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedUpdateNode(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::memorymanager::UpdateNodeRequest,::memorymanager::UpdateNodeResponse>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_Create<WithStreamedUnaryMethod_Set<WithStreamedUnaryMethod_Get<WithStreamedUnaryMethod_IncreaseRefCount<WithStreamedUnaryMethod_DecreaseRefCount<WithStreamedUnaryMethod_CreateNode<WithStreamedUnaryMethod_GetNode<WithStreamedUnaryMethod_UpdateNode<Service > > > > > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_Create<WithStreamedUnaryMethod_Set<WithStreamedUnaryMethod_Get<WithStreamedUnaryMethod_IncreaseRefCount<WithStreamedUnaryMethod_DecreaseRefCount<Service > > > > > StreamedService;
+  typedef WithStreamedUnaryMethod_Create<WithStreamedUnaryMethod_Set<WithStreamedUnaryMethod_Get<WithStreamedUnaryMethod_IncreaseRefCount<WithStreamedUnaryMethod_DecreaseRefCount<WithStreamedUnaryMethod_CreateNode<WithStreamedUnaryMethod_GetNode<WithStreamedUnaryMethod_UpdateNode<Service > > > > > > > > StreamedService;
 };
 
 }  // namespace memorymanager

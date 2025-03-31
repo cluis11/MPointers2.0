@@ -1,7 +1,6 @@
+#pragma once
 #include <iostream>
 #include <memory>
-#include <vector>
-#include <algorithm>
 #include <grpcpp/grpcpp.h>
 #include "../proto/memory_manager.grpc.pb.h"
 
@@ -20,187 +19,202 @@ using memorymanager::IncreaseRefCountResponse;
 using memorymanager::DecreaseRefCountRequest;
 using memorymanager::DecreaseRefCountResponse;
 
-class MemoryTestClient {
-public:
-    MemoryTestClient(std::shared_ptr<Channel> channel) 
-        : stub_(MemoryManager::NewStub(channel)) {}
-
-    int Create(size_t size, const std::string& type) {
+template<class T>
+class MPointer {
+private:
+    static std::unique_ptr<MemoryManager::Stub> stub_;
+    static std::string serverAddress;
+    int id; // ID del bloque en el servidor
+    
+    // Métodos privados de comunicación
+    static bool CreateOnServer(size_t size, const std::string& type, int* outId) {
+        ClientContext context;
         CreateRequest request;
+        CreateResponse response;
+        
         request.set_size(size);
         request.set_type(type);
-
-        CreateResponse response;
-        ClientContext context;
-
-        std::cout << "Creating block - Size: " << size << " Type: " << type << std::endl;
-
+        
         Status status = stub_->Create(&context, request, &response);
-
         if (status.ok() && response.success()) {
-            std::cout << "Created ID: " << response.id() << std::endl;
-            return response.id();
-        } else {
-            std::cerr << "Create failed" << std::endl;
-            return -1;
-        }
-    }
-
-    bool SetFloat(int id, float value) {
-        SetRequest request;
-        request.set_id(id);
-        request.set_float_value(value);
-
-        SetResponse response;
-        ClientContext context;
-
-        Status status = stub_->Set(&context, request, &response);
-
-        if (status.ok() && response.success()) {
-            std::cout << "Set ID " << id << " = " << value << std::endl;
+            *outId = response.id();
             return true;
         }
         return false;
     }
-
-    bool IncreaseRef(int id) {
-        IncreaseRefCountRequest request;
-        request.set_id(id);
-
-        IncreaseRefCountResponse response;
+    
+    bool SetOnServer(const T& value) {
         ClientContext context;
-
+        SetRequest request;
+        SetResponse response;
+        
+        request.set_id(id);
+        
+        if constexpr (std::is_same_v<T, int>) {
+            request.set_int_value(value);
+        } else if constexpr (std::is_same_v<T, float>) {
+            request.set_float_value(value);
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            request.set_string_value(value);
+        } else {
+            throw std::runtime_error("Tipo no soportado para Set");
+        }
+        
+        Status status = stub_->Set(&context, request, &response);
+        return status.ok() && response.success();
+    }
+    
+    bool GetFromServer(T* outValue) {
+        ClientContext context;
+        GetRequest request;
+        GetResponse response;
+        
+        request.set_id(id);
+        
+        Status status = stub_->Get(&context, request, &response);
+        if (!status.ok() || !response.success()) {
+            return false;
+        }
+        
+        if constexpr (std::is_same_v<T, int>) {
+            if (response.has_int_value()) {
+                *outValue = response.int_value();
+                return true;
+            }
+        } else if constexpr (std::is_same_v<T, float>) {
+            if (response.has_float_value()) {
+                *outValue = response.float_value();
+                return true;
+            }
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            if (response.has_string_value()) {
+                *outValue = response.string_value();
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    bool IncreaseRefCount() {
+        ClientContext context;
+        IncreaseRefCountRequest request;
+        IncreaseRefCountResponse response;
+        
+        request.set_id(id);
+        
         Status status = stub_->IncreaseRefCount(&context, request, &response);
         return status.ok() && response.success();
     }
-
-    bool DecreaseRef(int id) {
-        DecreaseRefCountRequest request;
-        request.set_id(id);
-
-        DecreaseRefCountResponse response;
+    
+    bool DecreaseRefCount() {
         ClientContext context;
-
+        DecreaseRefCountRequest request;
+        DecreaseRefCountResponse response;
+        
+        request.set_id(id);
+        
         Status status = stub_->DecreaseRefCount(&context, request, &response);
         return status.ok() && response.success();
     }
-
-    // NUEVA FUNCIÓN: Obtener valor float de un bloque
-    float GetFloatValue(int id) {
-        GetRequest request;
-        request.set_id(id);
-
-        GetResponse response;
-        ClientContext context;
-
-        Status status = stub_->Get(&context, request, &response);
-
-        if (status.ok() && response.success()) {
-            if (response.has_float_value()) {
-                return response.float_value();
-            }
-        }
-        throw std::runtime_error("Failed to get value for block " + std::to_string(id));
+    
+public:
+    // Inicialización estática
+    static void Init(const std::string& address) {
+        serverAddress = address;
+        auto channel = grpc::CreateChannel(serverAddress, grpc::InsecureChannelCredentials());
+        stub_ = MemoryManager::NewStub(channel);
     }
-
-    void RunEnhancedFragmentationTest() {
-        const size_t FLOAT_SIZE = sizeof(float);
-        const size_t TOTAL_SPACE = 256;
-        std::vector<int> all_ids;
-        std::vector<int> active_ids;
-        size_t block_size = 4 * FLOAT_SIZE;
-
-        // 1. Llenar memoria inicial
-        std::cout << "\n=== Fase 1: Llenado inicial (" 
-                  << (TOTAL_SPACE/block_size) << " bloques de " 
-                  << block_size << " bytes) ===" << std::endl;
-        
-        for (size_t i = 0; i < TOTAL_SPACE / block_size; i++) {
-            int id = Create(block_size, "float");
+    
+    // Constructor por defecto (nullptr)
+    MPointer() : id(-1) {}
+    
+    // Constructor de movimiento
+    MPointer(MPointer&& other) noexcept : id(other.id) {
+        other.id = -1;
+    }
+    
+    // Destructor
+    ~MPointer() {
+        if (id != -1) {
+            DecreaseRefCount();
+        }
+    }
+    
+    // Método estático para crear nuevos MPointer
+    static MPointer<T> New() {
+        MPointer<T> ptr;
+        if (!CreateOnServer(sizeof(T), typeid(T).name(), &ptr.id)) {
+            throw std::runtime_error("Failed to create MPointer on server");
+        }
+        return ptr;
+    }
+    
+    // Operador de asignación de movimiento
+    MPointer& operator=(MPointer&& other) noexcept {
+        if (this != &other) {
             if (id != -1) {
-                SetFloat(id, 1.0f + i);
-                IncreaseRef(id);
-                all_ids.push_back(id);
-                active_ids.push_back(id);
-                std::cout << "  - Creado bloque ID: " << id << " con valor: " << 1.0f + i << std::endl;
+                DecreaseRefCount();
             }
+            id = other.id;
+            other.id = -1;
         }
-
-        // 2. Liberar bloques alternos
-        std::cout << "\n=== Fase 2: Liberar bloques alternos ===" << std::endl;
-        for (size_t i = 1; i < all_ids.size(); i += 2) {
-            std::cout << "Liberando bloque ID: " << all_ids[i] << std::endl;
-            if (DecreaseRef(all_ids[i])) {
-                active_ids.erase(std::remove(active_ids.begin(), active_ids.end(), all_ids[i]), 
-                                active_ids.end());
-            }
-        }
-
-        // 3. Asignar bloque pequeño
-        std::cout << "\n=== Fase 3: Asignar bloque pequeño (4B) ===" << std::endl;
-        int small_id = Create(FLOAT_SIZE, "float");
-        if (small_id != -1) {
-            SetFloat(small_id, 99.9f);
-            IncreaseRef(small_id);
-            active_ids.push_back(small_id);
-            std::cout << "  - Creado bloque pequeño ID: " << small_id << " con valor: 99.9" << std::endl;
-        }
-
-        // 4. Intentar bloque grande
-        std::cout << "\n=== Fase 4: Intentar bloque grande (32B) ===" << std::endl;
-        int large_id = Create(8 * FLOAT_SIZE, "float");
-        if (large_id != -1) {
-            SetFloat(large_id, 999.9f);
-            IncreaseRef(large_id);
-            active_ids.push_back(large_id);
-            std::cout << "  - ¡Éxito! Bloque grande ID: " << large_id << " con valor: 999.9" << std::endl;
-        } else {
-            std::cout << "  - Fallo esperado (sin compactación)" << std::endl;
-        }
-
-        // 5. Verificación final con GET
-        VerifyFinalBlocks(active_ids);
+        return *this;
     }
-
-private:
-    std::unique_ptr<MemoryManager::Stub> stub_;
-
-    void VerifyFinalBlocks(const std::vector<int>& active_ids) {
-        std::cout << "\n=== VERIFICACIÓN FINAL CON GET ===" << std::endl;
-        std::cout << "Obteniendo valores de los bloques activos:" << std::endl;
-        
-        for (int id : active_ids) {
-            try {
-                float value = GetFloatValue(id);
-                std::cout << "  - Bloque ID: " << id << " contiene valor: " << value << std::endl;
-            } catch (const std::exception& e) {
-                std::cerr << "  - Error en bloque " << id << ": " << e.what() << std::endl;
+    
+    // Operador de asignación para compartir referencia
+    MPointer& operator=(const MPointer& other) {
+        if (this != &other) {
+            if (id != -1) {
+                DecreaseRefCount();
+            }
+            id = other.id;
+            if (id != -1) {
+                IncreaseRefCount();
             }
         }
-
-        // Reporte adicional
-        std::cout << "\n=== RESUMEN FINAL ===" << std::endl;
-        std::cout << "Total bloques activos: " << active_ids.size() << std::endl;
-        std::cout << "IDs activos: ";
-        for (int id : active_ids) {
-            std::cout << id << " ";
+        return *this;
+    }
+    
+    // Operador de desreferenciación
+    T operator*() {
+        if (id == -1) throw std::runtime_error("Dereferencing null MPointer");
+        
+        T value;
+        if (!GetFromServer(&value)) {
+            throw std::runtime_error("Failed to get value from server");
         }
-        std::cout << std::endl;
+        return value;
+    }
+    
+    // Operador de asignación de valor
+    void operator=(const T& value) {
+        if (id == -1) throw std::runtime_error("Assigning to null MPointer");
+        
+        if (!SetOnServer(value)) {
+            throw std::runtime_error("Failed to set value on server");
+        }
+    }
+    
+    // Operador & para obtener el ID
+    int operator&() const {
+        return id;
+    }
+    
+    // Operador -> para acceso a miembros
+    T* operator->() {
+        // Implementación simplificada (en realidad necesitarías cachear)
+        return &(**this);
+    }
+    
+    // Conversión a bool para verificar si es válido
+    explicit operator bool() const {
+        return id != -1;
     }
 };
 
-int main(int argc, char** argv) {
-    MemoryTestClient client(
-        grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials())
-    );
+// Inicialización de miembros estáticos
+template<class T>
+std::unique_ptr<MemoryManager::Stub> MPointer<T>::stub_ = nullptr;
 
-    std::cout << "=== Test de Fragmentación de Memoria ==="
-              << "\nConfiguración:"
-              << "\n- Tamaño total: 256 bytes"
-              << "\n- Tamaño de float: " << sizeof(float) << " bytes"
-              << std::endl;
-
-    client.RunEnhancedFragmentationTest();
-
-    return 0;
-}
+template<class T>
+std::string MPointer<T>::serverAddress = "";

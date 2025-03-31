@@ -25,6 +25,13 @@ using memorymanager::IncreaseRefCountRequest;
 using memorymanager::IncreaseRefCountResponse;
 using memorymanager::DecreaseRefCountRequest;
 using memorymanager::DecreaseRefCountResponse;
+//Nodos
+using memorymanager::CreateNodeRequest;
+using memorymanager::CreateNodeResponse;
+using memorymanager::GetNodeRequest;
+using memorymanager::GetNodeResponse;
+using memorymanager::UpdateNodeRequest;
+using memorymanager::UpdateNodeResponse;
 
 
 //Estructura para almacenar datos en el nodo del Memory Map
@@ -547,11 +554,20 @@ class MemoryBlock {
 
 };
 
+struct NodeStructure {
+    int data_id;    // ID del bloque de datos
+    int next_id;    // ID del siguiente nodo (0 para nullptr)
+    
+    NodeStructure(int dataId = 0, int nextId = 0) 
+        : data_id(dataId), next_id(nextId) {}
+};
+
 class MemoryManagerServiceImpl final : public MemoryManager::Service {
     public:
         MemoryManagerServiceImpl(MemoryBlock& memoryBlock) : memoryBlock_(memoryBlock) {}
     
-        Status Create(ServerContext* context, const CreateRequest* request, CreateResponse* response) override {
+        Status Create(ServerContext* context, const CreateRequest* request, CreateResponse* response)
+        override {
             //cout
             std::cout << "[Servidor] Recibida solicitud Create - Tipo: " << request->type() 
                       << ", Tamaño: " << request->size() << std::endl;
@@ -568,7 +584,8 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
             return Status::OK;
         }
     
-        Status Set(ServerContext* context, const SetRequest* request, SetResponse* response) override {
+        Status Set(ServerContext* context, const SetRequest* request, SetResponse* response)
+        override {
             //cout 
             std::cout << "[Servidor] Recibida solicitud Set - ID: " << request->id() << std::endl;
             try {
@@ -597,7 +614,8 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
             return Status::OK;
         }
     
-        Status Get(ServerContext* context, const GetRequest* request, GetResponse* response) override {
+        Status Get(ServerContext* context, const GetRequest* request, GetResponse* response) 
+        override {
             //cout 
             std::cout << "[Servidor] Recibida solicitud Get - ID: " << request->id() << std::endl;
             try {
@@ -633,8 +651,8 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
             return Status::OK;
         }
 
-        Status IncreaseRefCount(ServerContext* context, const IncreaseRefCountRequest* request, 
-            IncreaseRefCountResponse* response) override {
+        Status IncreaseRefCount(ServerContext* context, const IncreaseRefCountRequest* request, IncreaseRefCountResponse* response)
+         override {
             std::cout << "[Servidor] Incrementando ref count - ID: " << request->id() << std::endl;
             try {
             memoryBlock_.IncreaseRefCount(request->id());
@@ -644,10 +662,10 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
             response->set_success(false);
             }
             return Status::OK;
-            }
+        }
 
-            Status DecreaseRefCount(ServerContext* context, const DecreaseRefCountRequest* request, 
-                        DecreaseRefCountResponse* response) override {
+        Status DecreaseRefCount(ServerContext* context, const DecreaseRefCountRequest* request, DecreaseRefCountResponse* response) 
+        override {
             std::cout << "[Servidor] Decrementando ref count - ID: " << request->id() << std::endl;
             try {
             memoryBlock_.DecreaseRefCount(request->id());
@@ -657,11 +675,97 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
             response->set_success(false);
             }
             return Status::OK;
+        }
+
+
+            // Implementación de CreateNode
+            Status CreateNode(ServerContext* context, const CreateNodeRequest* request, 
+                CreateNodeResponse* response) override {
+   try {
+       // 1. Crear bloque para los datos del nodo
+       int dataId = memoryBlock_.Create(request->initial_data().size(), "node_data");
+       
+       // 2. Almacenar datos serializados
+       memoryBlock_.Set<string>(dataId, request->initial_data());
+       
+       // 3. Crear estructura de nodo
+       NodeStructure nodeStruct{dataId, 0};
+       int nodeId = memoryBlock_.Create(sizeof(NodeStructure), "node_structure");
+       memoryBlock_.Set<NodeStructure>(nodeId, nodeStruct);
+       
+       response->set_success(true);
+       response->set_node_id(nodeId);
+       response->set_data_id(dataId);
+   } catch (const std::exception& e) {
+       std::cerr << "Error en CreateNode: " << e.what() << std::endl;
+       response->set_success(false);
+   }
+   return Status::OK;
+}
+
+    // Implementación de GetNode
+    Status GetNode(ServerContext* context, const GetNodeRequest* request,
+                  GetNodeResponse* response) override {
+        try {
+            NodeStructure nodeStruct = memoryBlock_.Get<NodeStructure>(request->node_id());
+            
+            response->set_success(true);
+            response->set_data_id(nodeStruct.data_id);
+            response->set_next_id(nodeStruct.next_id);
+        } catch (...) {
+            response->set_success(false);
+        }
+        return Status::OK;
+    }
+    
+    // Implementación de UpdateNode
+    Status UpdateNode(ServerContext* context, const UpdateNodeRequest* request,
+                     UpdateNodeResponse* response) override {
+        try {
+            // 1. Obtener nodo existente
+            NodeStructure nodeStruct = memoryBlock_.Get<NodeStructure>(request->node_id());
+            
+            // 2. Actualizar next_id
+            nodeStruct.next_id = request->next_id();
+            memoryBlock_.Set<NodeStructure>(request->node_id(), nodeStruct);
+            
+            // 3. Actualizar datos si se proporcionaron
+            if (!request->updated_data().empty()) {
+                memoryBlock_.Set<std::string>(nodeStruct.data_id, request->updated_data());
             }
+            
+            response->set_success(true);
+        } catch (...) {
+            response->set_success(false);
+        }
+        return Status::OK;
+    }
     
     
     private:
         MemoryBlock& memoryBlock_;
+
+        // Serializador/deserializador genérico
+        template <typename T>
+        std::string serialize(const T& data) {
+            std::ostringstream oss;
+            {
+                cereal::BinaryOutputArchive archive(oss);
+                archive(data);
+            }
+            return oss.str();
+        }
+        
+        template <typename T>
+        T deserialize(const std::string& str) {
+            std::istringstream iss(str);
+            T data;
+            {
+                cereal::BinaryInputArchive archive(iss);
+                archive(data);
+            }
+            return data;
+        }
     };
     
     void RunServer(const std::string& listenPort, size_t memSize) {

@@ -3,75 +3,103 @@ syntax = "proto3";
 package memorymanager;
 
 service MemoryManager {
-    // Crea un bloque de memoria y retorna un ID
+    // Operaciones básicas de MPointers
     rpc Create(CreateRequest) returns (CreateResponse);
-
-    // Asigna un valor a un bloque de memoria
     rpc Set(SetRequest) returns (SetResponse);
-
-    // Obtiene el valor de un bloque de memoria
     rpc Get(GetRequest) returns (GetResponse);
-
-    // Incrementa el conteo de referencias de un bloque de memoria
     rpc IncreaseRefCount(IncreaseRefCountRequest) returns (IncreaseRefCountResponse);
-
-    // Decrementa el conteo de referencias de un bloque de memoria
     rpc DecreaseRefCount(DecreaseRefCountRequest) returns (DecreaseRefCountResponse);
+    
+    // Operaciones específicas para lista enlazada
+    rpc CreateNode(CreateNodeRequest) returns (CreateNodeResponse);
+    rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+    rpc UpdateNode(UpdateNodeRequest) returns (UpdateNodeResponse);
 }
 
-// Mensajes para Create
+// Mensajes básicos (existentes)
 message CreateRequest {
-    int32 size = 1;  // Tamaño del bloque
-    string type = 2;  // Tipo de dato (por ejemplo, "int", "float", etc.)
+    int32 size = 1;
+    string type = 2;
 }
 
 message CreateResponse {
     bool success = 1;
-    int32 id = 2;  // ID del bloque creado
+    int32 id = 2;
 }
 
-// Mensajes para Set
 message SetRequest {
-    int32 id = 1;  // ID del bloque
+    int32 id = 1;
     oneof value {
-        int32 int_value = 2;    // Valor entero
-        float float_value = 3;   // Valor flotante
-        string string_value = 4; // Valor cadena
+        int32 int_value = 2;
+        float float_value = 3;
+        string string_value = 4;
+        bytes serialized_value = 5;
     }
 }
 
 message SetResponse {
-    bool success = 1;  // Indica si la operación fue exitosa
+    bool success = 1;
 }
 
-// Mensajes para Get
 message GetRequest {
-    int32 id = 1;  // ID del bloque
+    int32 id = 1;
 }
 
 message GetResponse {
-    bool success = 1;  // Indica si la operación fue exitosa
+    bool success = 1;
     oneof value {
-        int32 int_value = 2;    // Valor entero
-        float float_value = 3;   // Valor flotante
-        string string_value = 4; // Valor cadena
+        int32 int_value = 2;
+        float float_value = 3;
+        string string_value = 4;
+        bytes serialized_value = 5;
     }
 }
 
-// Mensajes para IncreaseRefCount
+// Mensajes para conteo de referencias (existentes)
 message IncreaseRefCountRequest {
-    int32 id = 1;  // ID del bloque
+    int32 id = 1;
 }
 
 message IncreaseRefCountResponse {
-    bool success = 1;  // Indica si la operación fue exitosa
+    bool success = 1;
 }
 
-// Mensajes para DecreaseRefCount
 message DecreaseRefCountRequest {
-    int32 id = 1;  // ID del bloque
+    int32 id = 1;
 }
 
 message DecreaseRefCountResponse {
-    bool success = 1;  // Indica si la operación fue exitosa
+    bool success = 1;
+}
+
+// Mensajes nuevos para lista enlazada
+message CreateNodeRequest {
+    string node_type = 1;  // Ej: "MNode<int>"
+    bytes initial_data = 2; // Datos serializados iniciales
+}
+
+message CreateNodeResponse {
+    bool success = 1;
+    int32 node_id = 2;
+    int32 data_id = 3; // ID del bloque de datos del nodo
+}
+
+message GetNodeRequest {
+    int32 node_id = 1;
+}
+
+message GetNodeResponse {
+    bool success = 1;
+    int32 data_id = 2;
+    int32 next_id = 3; // ID del siguiente nodo (0 si es nulo)
+}
+
+message UpdateNodeRequest {
+    int32 node_id = 1;
+    int32 next_id = 2; // Nuevo ID para next
+    bytes updated_data = 3; // Datos actualizados (opcional)
+}
+
+message UpdateNodeResponse {
+    bool success = 1;
 }
