@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Encuentra las librerías de gRPC y Protocol Buffers
 find_package(Protobuf REQUIRED)
 find_package(gRPC REQUIRED)
+find_package(cereal REQUIRED)
 
 # Archivos generados manualmente a partir del .proto
 set(PROTO_SRCS
@@ -26,8 +27,16 @@ set(PROTO_HDRS
 
 # Archivos fuente del servidor
 set(SERVER_SRCS
-    "${CMAKE_CURRENT_SOURCE_DIR}/server/MemoryMap.cpp"  
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/main.cpp"  
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/include/NodeStructure.h"  
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/src/MemoryBlock.cpp"  
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/src/MemoryList.cpp"  
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/src/MemoryManager.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/src/MemoryMap.cpp"  
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/src/Server.cpp"  
 )
+
+message(STATUS "SERVER_SRCS: ${SERVER_SRCS}")
 
 set(CLIENT_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/client/client.cpp"
@@ -39,7 +48,10 @@ add_executable(mem-mgr ${SERVER_SRCS} ${PROTO_SRCS})
 add_executable(mem-mgr-client ${CLIENT_SRCS} ${PROTO_SRCS})
 
 # Incluye los directorios de los archivos generados por protoc
-target_include_directories(mem-mgr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/proto)
+target_include_directories(mem-mgr PRIVATE 
+${CMAKE_CURRENT_SOURCE_DIR}/server/include
+${CMAKE_CURRENT_SOURCE_DIR}/proto)
+
 # Incluye los directorios de los archivos generados por protoc
 target_include_directories(mem-mgr-client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/proto)
 
@@ -49,6 +61,7 @@ target_link_libraries(mem-mgr
     gRPC::grpc++
     gRPC::grpc
     protobuf::libprotobuf
+    cereal::cereal
 )
 
 # Enlaza las librerías necesarias
