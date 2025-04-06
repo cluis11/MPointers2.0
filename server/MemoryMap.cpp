@@ -25,14 +25,6 @@ using memorymanager::IncreaseRefCountRequest;
 using memorymanager::IncreaseRefCountResponse;
 using memorymanager::DecreaseRefCountRequest;
 using memorymanager::DecreaseRefCountResponse;
-//Nodos
-using memorymanager::CreateNodeRequest;
-using memorymanager::CreateNodeResponse;
-using memorymanager::GetNodeRequest;
-using memorymanager::GetNodeResponse;
-using memorymanager::UpdateNodeRequest;
-using memorymanager::UpdateNodeResponse;
-
 
 //Estructura para almacenar datos en el nodo del Memory Map
 struct MemoryMap
@@ -93,22 +85,6 @@ class MemoryList
         Node* getHead() const { return head; }
         void updateHead(Node* newHead) { head = newHead; }
         Node* getLast() const { return last; }
-
-        /*void insert(int id, size_t size, const string& type, void* ptr) {
-            Node* newNode = new Node(id, size, type, ptr);
-            if (head == nullptr){
-                head = newNode;
-                last = newNode;
-            }
-            else{
-                Node* current = head;
-                while (current->next != nullptr){
-                    current = current->next;
-                }
-                current->next = newNode;
-                last=newNode;
-            }
-        }*/
 
         void insert(int id, size_t size, const string& type, void* ptr) {
             Node* newNode = new Node(id, size, type, ptr);
@@ -266,8 +242,8 @@ class MemoryBlock {
 
     public:
         MemoryBlock(size_t sizeMB){
-            memSize = 256;
-            memBlock = malloc(256);
+            memSize = sizeMB * 1024 * 1024;
+            memBlock = malloc(memSize);
             if (!memBlock) {
                 cout << "Error al reservar la memoria";
             }
@@ -278,28 +254,6 @@ class MemoryBlock {
         ~MemoryBlock(){
             free(memBlock);
         }
-
-        /*int Create(size_t size, const string& type) {
-            if (usedMem + size > memSize) {
-                throw std::runtime_error("No hay espacio suficiente");
-            }
-        
-            if (type == "int" && size != sizeof(int)) {
-                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'int'");
-            }
-            else if (type == "float" && size != sizeof(float)) {
-                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'float'");
-            }
-            else if (type == "string" && size != sizeof(string)) {
-                throw std::runtime_error("La memoria dada no coincide con el tipo de dato 'string'");
-            }
-            
-            void* addr = static_cast<char*>(memBlock) + usedMem;
-        
-            memList.insert(nextId, size, type, addr); 
-            usedMem += size; 
-            return nextId++;
-        }*/
 
         int Create(size_t size, const string& type) {
             std::cout << "[MemoryBlock] Creando bloque - Tipo: " << type << ", Tamaño: " << size << std::endl;
@@ -438,129 +392,79 @@ class MemoryBlock {
             memList.printList();
         }
 
-        template <typename T>
-        void Set(int id, const T& value) {
-            std::cout << "[MemoryBlock] Set - ID: " << id << ", Tipo: " << typeid(T).name() << std::endl;
-            MemoryMap* block = memList.findById(id);
-            if (!block) {
-                throw std::runtime_error("Bloque de memoria no se ha encontrado");
-            }
-            if (sizeof(T) > block->size) {
-                throw std::runtime_error("El valor es más grande que el bloque de memoria");
-            }
-            std::cout << "[MemoryBlock] Asignando valor al bloque..." << std::endl;
-            *static_cast<T*>(block->ptr) = value; 
-            block->isNew = false;  
-            std::cout << "[MemoryBlock] Valor asignado exitosamente" << std::endl;  
-        }
-
-
-        template <typename T>
-        T Get(int id) {
-            std::cout << "[MemoryBlock] Get - ID: " << id << ", Tipo: " << typeid(T).name() << std::endl;
+        // Versión específica para datos binarios (reemplaza al template)
+        void Set(int id, const std::string& serialized_data) {
             MemoryMap* block = memList.findById(id);
             if (!block) {
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }
-            std::cout << "[MemoryBlock] Recuperando valor del bloque..." << std::endl;
-            return *static_cast<T*>(block->ptr);
+            if (serialized_data.size() > block->size) {
+                throw std::runtime_error("Datos exceden el tamaño del bloque");
+            }
+            // Copia directa de los bytes
+            std::memcpy(block->ptr, serialized_data.data(), block->size);
+            block->isNew = false;
         }
 
-        void DecreaseRefCount(int id) {
-            std::cout << "\n[MemoryBlock] Reduciendo conteo de referencias para bloque ID: " << id << std::endl;
-            
-            // Buscar el bloque de memoria
+        std::string Get(int id) {
             MemoryMap* block = memList.findById(id);
-            
             if (!block) {
-                std::cerr << "[MemoryBlock] ERROR: Bloque ID " << id << " no encontrado" << std::endl;
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }
-            
-            std::cout << "[MemoryBlock] Bloque encontrado:" << std::endl;
-            block->print();
-            
-            // Decrementar el contador
-            --block->refCount;
-            std::cout << "[MemoryBlock] Nuevo conteo de referencias: " << block->refCount << std::endl;
-            
-            // Eliminar el bloque si no hay más referencias
+            // Creamos un string con el contenido binario del bloque
+            return std::string(static_cast<char*>(block->ptr), block->size);
+        }
+
+        void CleanMemorySpace(MemoryMap* block){
             if (block->refCount == 0) {
-                std::cout << "[MemoryBlock] Liberando bloque..." << std::endl;
-                
-                // Guardar información antes de liberar
                 size_t freedSize = block->size;
                 void* freedPtr = block->ptr;
-                bool wasLastBlock = (memList.getLast() && memList.getLast()->block.id == id); // Nueva línea
-                
+                bool wasLastBlock = (memList.getLast() && memList.getLast()->block.id == block->id);  
                 // Liberar el bloque
-                if (memList.removeById(id)) {
-                    std::cout << "[MemoryBlock] Bloque removido de la lista" << std::endl;
-                    
-                    // Actualizar contadores de memoria (versión mejorada)
+                if (memList.removeById(block->id)) {
                     usedMem -= freedSize;
-                    
-                    if (wasLastBlock) {  // Nueva condición
+                    if (wasLastBlock) { 
                         memAtEnd += freedSize;
-                        std::cout << "[MemoryBlock] Se liberó el último bloque. MemAtEnd actualizado a: " 
-                                  << memAtEnd << std::endl;
                     }
-                    
-                    // Sugerir compactación si hay fragmentación
-                    if (memAtEnd < freedSize) {
-                        std::cout << "[MemoryBlock] SUGERENCIA: Ejecutar CompactMemory() "
-                                  << "para reducir fragmentación" << std::endl;
-                    }
-                } else {
+                } 
+                else {
                     std::cerr << "[MemoryBlock] ERROR: No se pudo remover el bloque" << std::endl;
                 }
             }
         }
-        
-        void IncreaseRefCount(int id) {
-            std::cout << "\n[MemoryBlock] Aumentando conteo de referencias para bloque ID: " << id << std::endl;
-            
+
+        void DecreaseRefCount(int id) {
             // Buscar el bloque de memoria
             MemoryMap* block = memList.findById(id);
-            
+            if (!block) {
+                std::cerr << "[MemoryBlock] ERROR: Bloque ID " << id << " no encontrado" << std::endl;
+                throw std::runtime_error("Bloque de memoria no encontrado");
+            }    
+            // Decrementar el contador
+            --block->refCount;
+        }
+        
+        void IncreaseRefCount(int id) {
+            // Buscar el bloque de memoria
+            MemoryMap* block = memList.findById(id);
             if (!block) {
                 std::cerr << "[MemoryBlock] ERROR: Bloque ID " << id << " no encontrado" << std::endl;
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }
-            
-            std::cout << "[MemoryBlock] Bloque encontrado - Detalles:" << std::endl;
-            std::cout << " - Tipo: " << block->type << std::endl;
-            std::cout << " - Tamaño: " << block->size << std::endl;
-            std::cout << " - Referencias antes: " << block->refCount << std::endl;
-            
             // Incrementar el contador
             block->refCount++;
-            
-            std::cout << "[MemoryBlock] Referencias después: " << block->refCount << std::endl;
-            
-            // Mostrar estado actual del bloque
-            std::cout << "[MemoryBlock] Estado actual del bloque:" << std::endl;
-            block->print();
         }
 
-    MemoryMap* GetMemoryMapById(int id) {
-        return memList.findById(id);
-    }
+        MemoryMap* GetMemoryMapById(int id) {
+            return memList.findById(id);
+        }
 
-    void PrintMemoryList() {
-        cout << "Contenido de la lista de MemoryBlock:" << std::endl;
-        memList.printList();
-    }
-
+        void PrintMemoryList() {
+            cout << "Contenido de la lista de MemoryBlock:" << std::endl;
+            memList.printList();
+        }
 };
 
-struct NodeStructure {
-    int data_id;    // ID del bloque de datos
-    int next_id;    // ID del siguiente nodo (0 para nullptr)
-    
-    NodeStructure(int dataId = 0, int nextId = 0) 
-        : data_id(dataId), next_id(nextId) {}
-};
 
 class MemoryManagerServiceImpl final : public MemoryManager::Service {
     public:
@@ -586,28 +490,16 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
     
         Status Set(ServerContext* context, const SetRequest* request, SetResponse* response)
         override {
-            //cout 
-            std::cout << "[Servidor] Recibida solicitud Set - ID: " << request->id() << std::endl;
             try {
-                if (request->has_int_value()) {
-                    //cout 
-                    std::cout << "[Servidor] Asignando valor int: " << request->int_value() << std::endl;
-                    memoryBlock_.Set<int>(request->id(), request->int_value());
-                } else if (request->has_float_value()) {
-                    //cout 
-                    std::cout << "[Servidor] Asignando valor float: " << request->float_value() << std::endl;
-                    memoryBlock_.Set<float>(request->id(), request->float_value());
-                } else if (request->has_string_value()) {
-                    //cout
-                    std::cout << "[Servidor] Asignando valor string: " << request->string_value() 
-                              << " (longitud: " << request->string_value().size() << ")" << std::endl;
-                    memoryBlock_.Set<std::string>(request->id(), request->string_value());
-                    //cout
-                    std::cout << "[Servidor] Valor string asignado exitosamente" << std::endl;
-                }
+                // Obtener los datos serializados del request
+                const std::string& serialized_data = request->data();
+                // Almacenar los datos directamente como bytes/bloque binario
+                memoryBlock_.Set(request->id(), serialized_data);
                 response->set_success(true);
-            } catch (const std::exception& e) {
-                //cout
+                std::cout << "[Servidor] Datos asignados exitosamente" << std::endl;
+                response->set_success(true);
+            } 
+            catch (const std::exception& e) {
                 std::cerr << "[Servidor] Error en Set: " << e.what() << std::endl;
                 response->set_success(false);
             }
@@ -616,35 +508,20 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
     
         Status Get(ServerContext* context, const GetRequest* request, GetResponse* response) 
         override {
-            //cout 
-            std::cout << "[Servidor] Recibida solicitud Get - ID: " << request->id() << std::endl;
             try {
                 MemoryMap* block = memoryBlock_.GetMemoryMapById(request->id());
                 if (!block) {
-                    //cout
-                    std::cout << "[Servidor] Bloque no encontrado - ID: " << request->id() << std::endl;
                     response->set_success(false);
                     return Status::OK;
                 }
-        
-                //cout
-                std::cout << "[Servidor] Bloque encontrado - Tipo: " << block->type << std::endl;
+
+
+                // Obtenemos los datos como binario crudo
+                std::string binary_data = memoryBlock_.Get(request->id());
                 response->set_success(true);
-                if (block->type == "int") {
-                    int value = memoryBlock_.Get<int>(request->id());
-                    std::cout << "[Servidor] Valor int obtenido: " << value << std::endl;
-                    response->set_int_value(value);
-                } else if (block->type == "float") {
-                    float value = memoryBlock_.Get<float>(request->id());
-                    std::cout << "[Servidor] Valor float obtenido: " << value << std::endl;
-                    response->set_float_value(value);
-                } else if (block->type == "string") {
-                    std::string value = memoryBlock_.Get<std::string>(request->id());
-                    std::cout << "[Servidor] Valor string obtenido: " << value 
-                              << " (longitud: " << value.size() << ")" << std::endl;
-                    response->set_string_value(value);
-                }
-            } catch (const std::exception& e) {
+                response->set_data(binary_data);  // Campo 'data' de tipo bytes en el proto
+            } 
+            catch (const std::exception& e) {
                 std::cerr << "[Servidor] Error en Get: " << e.what() << std::endl;
                 response->set_success(false);
             }
@@ -676,72 +553,7 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
             }
             return Status::OK;
         }
-
-
-            // Implementación de CreateNode
-            Status CreateNode(ServerContext* context, const CreateNodeRequest* request, 
-                CreateNodeResponse* response) override {
-   try {
-       // 1. Crear bloque para los datos del nodo
-       int dataId = memoryBlock_.Create(request->initial_data().size(), "node_data");
-       
-       // 2. Almacenar datos serializados
-       memoryBlock_.Set<string>(dataId, request->initial_data());
-       
-       // 3. Crear estructura de nodo
-       NodeStructure nodeStruct{dataId, 0};
-       int nodeId = memoryBlock_.Create(sizeof(NodeStructure), "node_structure");
-       memoryBlock_.Set<NodeStructure>(nodeId, nodeStruct);
-       
-       response->set_success(true);
-       response->set_node_id(nodeId);
-       response->set_data_id(dataId);
-   } catch (const std::exception& e) {
-       std::cerr << "Error en CreateNode: " << e.what() << std::endl;
-       response->set_success(false);
-   }
-   return Status::OK;
-}
-
-    // Implementación de GetNode
-    Status GetNode(ServerContext* context, const GetNodeRequest* request,
-                  GetNodeResponse* response) override {
-        try {
-            NodeStructure nodeStruct = memoryBlock_.Get<NodeStructure>(request->node_id());
-            
-            response->set_success(true);
-            response->set_data_id(nodeStruct.data_id);
-            response->set_next_id(nodeStruct.next_id);
-        } catch (...) {
-            response->set_success(false);
-        }
-        return Status::OK;
-    }
-    
-    // Implementación de UpdateNode
-    Status UpdateNode(ServerContext* context, const UpdateNodeRequest* request,
-                     UpdateNodeResponse* response) override {
-        try {
-            // 1. Obtener nodo existente
-            NodeStructure nodeStruct = memoryBlock_.Get<NodeStructure>(request->node_id());
-            
-            // 2. Actualizar next_id
-            nodeStruct.next_id = request->next_id();
-            memoryBlock_.Set<NodeStructure>(request->node_id(), nodeStruct);
-            
-            // 3. Actualizar datos si se proporcionaron
-            if (!request->updated_data().empty()) {
-                memoryBlock_.Set<std::string>(nodeStruct.data_id, request->updated_data());
-            }
-            
-            response->set_success(true);
-        } catch (...) {
-            response->set_success(false);
-        }
-        return Status::OK;
-    }
-    
-    
+     
     private:
         MemoryBlock& memoryBlock_;
 
