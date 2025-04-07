@@ -38,7 +38,11 @@ target_link_libraries(mem-mgr
 set(CLIENT_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/client/client.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/client/MPointer.h"  # MPointers.h en client/
+    "${CMAKE_CURRENT_SOURCE_DIR}/client/MPointerID.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/client/MemoryManagerClient.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/client/node.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/client/LinkedList.h"
+    
 )
 
 add_executable(mem-mgr-client ${CLIENT_SRCS} ${PROTO_SRCS})

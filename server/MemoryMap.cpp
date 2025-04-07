@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <cstddef> 
+#include <cstring>
+#include <type_traits>
 
 using std::string;
 using std::size_t;
@@ -557,26 +559,25 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
     private:
         MemoryBlock& memoryBlock_;
 
-        // Serializador/deserializador genérico
+        // Serialización binaria cruda (siempre del mismo tamaño que el tipo)
         template <typename T>
-        std::string serialize(const T& data) {
-            std::ostringstream oss;
-            {
-                cereal::BinaryOutputArchive archive(oss);
-                archive(data);
-            }
-            return oss.str();
+        std::string SerializarExacto(const T& dato) {
+            static_assert(std::is_trivially_copyable_v<T>, 
+                        "El tipo debe ser trivialmente copiable");
+            
+            return std::string(reinterpret_cast<const char*>(&dato), 
+                            reinterpret_cast<const char*>(&dato) + sizeof(T));
         }
-        
+
+        // Deserialización binaria cruda
         template <typename T>
-        T deserialize(const std::string& str) {
-            std::istringstream iss(str);
-            T data;
-            {
-                cereal::BinaryInputArchive archive(iss);
-                archive(data);
-            }
-            return data;
+        T DeserializarExacto(const std::string& binario) {
+            static_assert(std::is_trivially_copyable_v<T>,
+                        "El tipo debe ser trivialmente copiable");
+            
+            T resultado;
+            std::memcpy(&resultado, binario.data(), sizeof(T));
+            return resultado;
         }
     };
     

@@ -7,12 +7,6 @@
 #include <type_traits>
 #include <stdexcept>
 
-// Estructura Node genérica
-template <typename T>
-struct Node {
-    T value;
-    int next;  // ID del siguiente nodo
-};
 
 class MemoryManagerClient {
 public:

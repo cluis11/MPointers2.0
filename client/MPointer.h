@@ -4,12 +4,20 @@
 #include <stdexcept>
 #include <mutex>
 
+template <typename T> struct Node;
+
 template<class T>
 class MPointer {
+private:
+    int id_;
+    mutable T cached_value_;
+    mutable Node<T> cached_node_;
+    static std::shared_ptr<MemoryManagerClient> client_instance_;
+    static std::mutex client_mutex_;
 
-    private:
+    // Constructor privado
+    explicit MPointer(int id) : id_(id) {}
 
-    // Clase proxy para operator*
     class PointerProxy {
         MPointer<T>& parent_;
     public:
@@ -24,16 +32,6 @@ class MPointer {
         }
     };
 
-    int id_;
-    mutable T cached_value_;
-    static std::shared_ptr<MemoryManagerClient> client_instance_;
-    static std::mutex client_mutex_;
-
-    // Constructor privado
-    explicit MPointer(int id) : id_(id) {}
-
-
-    // Obtiene o crea el cliente singleton
     static std::shared_ptr<MemoryManagerClient> GetClient() {
         std::lock_guard<std::mutex> lock(client_mutex_);
         if (!client_instance_) {
@@ -68,55 +66,63 @@ class MPointer {
     }
 
 public:
-    // Método New estático (única interfaz pública)
+    // Constructores
+    MPointer() : id_(-1) {}
+    explicit MPointer(int id) : id_(id) {}
+
+    // Métodos estáticos
     static MPointer New() {
         int new_id = GetClient()->Create(TypeName(), sizeof(T));
         return MPointer(new_id);
     }
 
-    // Operador * optimizado
+    static MPointer NewNode(const Node<T>& initial_val) {
+        MPointer ptr = New();
+        *ptr = initial_val;
+        return ptr;
+    }
+
+    // Operadores
     PointerProxy operator*() {
         ValidatePointer();
         return PointerProxy(*this);
     }
 
-    // Operador ->
     T* operator->() {
         ValidatePointer();
+        if constexpr (std::is_same_v<T, Node<int>> || 
+                     std::is_same_v<T, Node<float>> || 
+                     std::is_same_v<T, Node<std::string>>) {
+            cached_node_ = GetClient()->Get<Node<T>>(id_);
+            return reinterpret_cast<T*>(&cached_node_);
+        }
         cached_value_ = GetClient()->Get<T>(id_);
         return &cached_value_;
     }
 
-    // Operador = para asignación de valor
-    MPointer& operator=(const T& value) {
-        ValidatePointer();
-        GetClient()->Set<T>(id_, value);
+    MPointer& operator=(int new_id) {
+        ReleaseCurrent();
+        id_ = new_id;
+        if (id_ != -1) GetClient()->IncreaseRefCount(id_);
         return *this;
     }
 
-    // Operador = para compartir referencia
     MPointer& operator=(const MPointer& other) {
         if (this != &other) {
             ReleaseCurrent();
             id_ = other.id_;
-            if (id_ != -1) {
-                GetClient()->IncreaseRefCount(id_);
-            }
+            if (id_ != -1) GetClient()->IncreaseRefCount(id_);
         }
         return *this;
     }
 
-    // Operador & para obtener ID
-    int operator&() const {
-        return id_;
-    }
+    int GetId() const { return id_; }
 
-    // Move constructor
+    // Move semantics
     MPointer(MPointer&& other) noexcept : id_(other.id_) {
         other.id_ = -1;
     }
 
-    // Move assignment
     MPointer& operator=(MPointer&& other) noexcept {
         if (this != &other) {
             ReleaseCurrent();
@@ -126,7 +132,6 @@ public:
         return *this;
     }
 
-    // Destructor
     ~MPointer() {
         ReleaseCurrent();
     }

@@ -1,30 +1,21 @@
 #include <iostream>
-#include "MPointer.h"
+#include "LinkedList.h"
 
 int main() {
-     try {
-        // Ejemplo con int
-        MPointer<int> entero = MPointer<int>::New();
-        *entero = 42;
-        std::cout << "Valor entero: " << *entero << std::endl;
+    try {
+        LinkedList<int> list;
 
-        // Ejemplo con float
-        MPointer<float> flotante = MPointer<float>::New();
-        *flotante = 3.1416f;
-        std::cout << "Valor flotante: " << *flotante << std::endl;
+        // Agregar elementos
+        list.Add(10);
+        list.Add(20);
+        list.Add(30);
 
-        // Ejemplo con operaciones matemáticas
-        *entero = *entero * 2;
-        *flotante = *flotante / 2;
+        // Recorrer lista
+        std::cout << "Elemento en posición 1: " << list.Get(1) << std::endl;  // 20
 
-        std::cout << "Entero modificado: " << *entero << std::endl;
-        std::cout << "Flotante modificado: " << *flotante << std::endl;
-
-        // Ejemplo con Node<int>
-       /* MPointer<Node<int>> nodo = MPointer<Node<int>>::New();
-        *nodo = Node<int>{10, -1};
-        std::cout << "Nodo valor: " << (*nodo).value 
-                  << ", next: " << (*nodo).next << std::endl;*/
+        // Eliminar
+        list.Remove(20);
+        std::cout << "Tamaño después de eliminar: " << list.Size() << std::endl;  // 2
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
