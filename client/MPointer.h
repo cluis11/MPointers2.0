@@ -1,22 +1,23 @@
 #pragma once
 #include "MemoryManagerClient.h"
+#include "MPointerID.h"
 #include <memory>
 #include <stdexcept>
 #include <mutex>
-
-template <typename T> struct Node;
+#include <type_traits>
+#include "Node.h" 
 
 template<class T>
 class MPointer {
 private:
-    int id_;
+    MPointerID id_;
     mutable T cached_value_;
     mutable Node<T> cached_node_;
     static std::shared_ptr<MemoryManagerClient> client_instance_;
     static std::mutex client_mutex_;
 
     // Constructor privado
-    explicit MPointer(int id) : id_(id) {}
+    explicit MPointer(MPointerID id) : id_(id) {}
 
     class PointerProxy {
         MPointer<T>& parent_;
@@ -24,11 +25,11 @@ private:
         explicit PointerProxy(MPointer<T>& parent) : parent_(parent) {}
         
         void operator=(const T& value) {
-            parent_.GetClient()->Set<T>(parent_.id_, value);
+            parent_.GetClient()->Set<T>(static_cast<int>(parent_.id_), value);
         }
         
         operator T() {
-            return parent_.GetClient()->Get<T>(parent_.id_);
+            return parent_.GetClient()->Get<T>(static_cast<int>(parent_.id_));
         }
     };
 
@@ -43,15 +44,15 @@ private:
     }
 
     void ValidatePointer() const {
-        if (id_ == -1) {
+        if (static_cast<int>(id_) == -1) {
             throw std::runtime_error("MPointer no inicializado");
         }
     }
 
     void ReleaseCurrent() {
-        if (id_ != -1) {
-            GetClient()->DecreaseRefCount(id_);
-            id_ = -1;
+        if (static_cast<int>(id_) != -1) {
+            GetClient()->DecreaseRefCount(static_cast<int>(id_));
+            id_ = MPointerID(-1);
         }
     }
 
@@ -68,17 +69,34 @@ private:
 public:
     // Constructores
     MPointer() : id_(-1) {}
-    explicit MPointer(int id) : id_(id) {}
+    explicit MPointer(int id) : id_(id) {}  // Mantenemos para compatibilidad
+
+    // Constructor de copia
+    MPointer(const MPointer& other) : id_(other.id_) {
+        if (static_cast<int>(id_) != -1) GetClient()->IncreaseRefCount(static_cast<int>(id_));
+    }
+
+    // Move semantics
+    MPointer(MPointer&& other) noexcept : id_(other.id_) {
+        other.id_ = MPointerID(-1);
+    }
+
+    MPointer& operator=(int new_id) {
+        ReleaseCurrent();
+        id_ = MPointerID(new_id);
+        if (new_id != -1) GetClient()->IncreaseRefCount(new_id);
+        return *this;
+    }
 
     // Métodos estáticos
     static MPointer New() {
         int new_id = GetClient()->Create(TypeName(), sizeof(T));
-        return MPointer(new_id);
+        return MPointer(MPointerID(new_id));
     }
 
-    static MPointer NewNode(const Node<T>& initial_val) {
+    static MPointer NewNode(const T& initial_val) {
         MPointer ptr = New();
-        *ptr = initial_val;
+        *ptr = initial_val;  // Asignación directa
         return ptr;
     }
 
@@ -93,17 +111,17 @@ public:
         if constexpr (std::is_same_v<T, Node<int>> || 
                      std::is_same_v<T, Node<float>> || 
                      std::is_same_v<T, Node<std::string>>) {
-            cached_node_ = GetClient()->Get<Node<T>>(id_);
+            cached_node_ = GetClient()->Get<Node<T>>(static_cast<int>(id_));
             return reinterpret_cast<T*>(&cached_node_);
         }
-        cached_value_ = GetClient()->Get<T>(id_);
+        cached_value_ = GetClient()->Get<T>(static_cast<int>(id_));
         return &cached_value_;
     }
 
-    MPointer& operator=(int new_id) {
+    MPointer& operator=(MPointerID new_id) {
         ReleaseCurrent();
         id_ = new_id;
-        if (id_ != -1) GetClient()->IncreaseRefCount(id_);
+        if (static_cast<int>(id_) != -1) GetClient()->IncreaseRefCount(static_cast<int>(id_));
         return *this;
     }
 
@@ -111,26 +129,21 @@ public:
         if (this != &other) {
             ReleaseCurrent();
             id_ = other.id_;
-            if (id_ != -1) GetClient()->IncreaseRefCount(id_);
+            if (static_cast<int>(id_) != -1) GetClient()->IncreaseRefCount(static_cast<int>(id_));
         }
         return *this;
-    }
-
-    int GetId() const { return id_; }
-
-    // Move semantics
-    MPointer(MPointer&& other) noexcept : id_(other.id_) {
-        other.id_ = -1;
     }
 
     MPointer& operator=(MPointer&& other) noexcept {
         if (this != &other) {
             ReleaseCurrent();
             id_ = other.id_;
-            other.id_ = -1;
+            other.id_ = MPointerID(-1);
         }
         return *this;
     }
+
+    int GetId() const { return static_cast<int>(id_); }
 
     ~MPointer() {
         ReleaseCurrent();

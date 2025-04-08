@@ -9,46 +9,48 @@ private:
 
 public:
     LinkedList() {
-        head_ = MPointer<Node<T>>::NewNode({T(), MPointerID(-1)});
+        Node<T> head_node{T(), MPointerID(-1)};  // Construcción explícita
+        head_ = MPointer<Node<T>>::NewNode(head_node);  // Pasar objeto ya construido
     }
 
     void Add(T value) {
-        MPointer<Node<T>> newNode = MPointer<Node<T>>::NewNode({value, MPointerID(-1)});
+        Node<T> new_node{value, MPointerID(-1)};  // Construcción explícita
+        MPointer<Node<T>> newNode = MPointer<Node<T>>::NewNode(new_node);
 
-        if (head_->next.get() == -1) {
-            head_->next = newNode.GetId();
+        if (static_cast<int>(head_->next) == -1) {
+            head_->next = MPointerID(newNode.GetId());  // Cambiado
         } else {
             MPointer<Node<T>> current = head_;
-            while (current->next.get() != -1) {
-                current = current->next.get();
+            while (static_cast<int>(current->next) != -1) {
+                current = MPointer<Node<T>>(static_cast<int>(current->next));  // Cambiado
             }
-            current->next = newNode.GetId();
+            current->next = MPointerID(newNode.GetId());  // Cambiado
         }
     }
 
     bool Remove(T value) {
-        if (head_->next.get() == -1) return false;
+        if (static_cast<int>(head_->next) == -1) return false;
 
         MPointer<Node<T>> prev = head_;
-        MPointer<Node<T>> current = prev->next.get();
+        MPointer<Node<T>> current = MPointer<Node<T>>(static_cast<int>(prev->next));  // Cambiado
 
-        while (current->next.get() != -1 && current->value != value) {
+        while (static_cast<int>(current->next) != -1 && current->value != value) {
             prev = current;
-            current = current->next.get();
+            current = MPointer<Node<T>>(static_cast<int>(current->next));  // Cambiado
         }
 
         if (current->value != value) return false;
 
-        prev->next = current->next.get();
+        prev->next = MPointerID(static_cast<int>(current->next));  // Cambiado
         return true;
     }
 
     T Get(int index) {
-        MPointer<Node<T>> current = head_->next.get();
+        MPointer<Node<T>> current = MPointer<Node<T>>(static_cast<int>(head_->next));  // Cambiado
         int i = 0;
 
-        while (current->next.get() != -1 && i < index) {
-            current = current->next.get();
+        while (static_cast<int>(current->next) != -1 && i < index) {
+            current = MPointer<Node<T>>(static_cast<int>(current->next));  // Cambiado
             i++;
         }
 
@@ -60,8 +62,8 @@ public:
         int count = 0;
         MPointer<Node<T>> current = head_;
 
-        while (current->next.get() != -1) {
-            current = current->next.get();
+        while (static_cast<int>(current->next) != -1) {
+            current = MPointer<Node<T>>(static_cast<int>(current->next));  // Cambiado
             count++;
         }
         return count;

@@ -1,11 +1,13 @@
+// Añadir al inicio del archivo:
 #pragma once
-#include "MPointerID.h"  // Nuevo archivo para MPointerID
+#include "MPointerID.h"
 
 template <typename T>
 struct Node {
+    using value_type = T;  // Para static_assert en MPointer
     T value;
-    MPointerID next;  // Cambiado de int a MPointerID
+    MPointerID next;
 
-    Node() : value(), next(-1) {}
+    Node() : value(T()), next(-1) {}
     Node(T val, MPointerID nxt) : value(val), next(nxt) {}
 };

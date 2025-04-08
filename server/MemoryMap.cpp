@@ -28,6 +28,12 @@ using memorymanager::IncreaseRefCountResponse;
 using memorymanager::DecreaseRefCountRequest;
 using memorymanager::DecreaseRefCountResponse;
 
+// Debug macros
+#define DEBUG_LOG(msg) std::cout << "[DEBUG] " << __FUNCTION__ << "(): " << msg << std::endl
+#define DEBUG_LOG_VAR(var) std::cout << "[DEBUG] " << __FUNCTION__ << "(): " << #var << " = " << var << std::endl
+#define ERROR_LOG(msg) std::cerr << "[ERROR] " << __FUNCTION__ << "(): " << msg << std::endl
+#define MEMORY_LOG(msg) std::cout << "[MEMORY] " << msg << std::endl
+
 //Estructura para almacenar datos en el nodo del Memory Map
 struct MemoryMap
 {
@@ -40,15 +46,18 @@ struct MemoryMap
 
     //constructor de la estructura
     MemoryMap(int id, size_t size, string type, void* ptr)
-        : id(id), size(size), type(type), refCount(0), ptr(ptr), isNew(true) {}
+        : id(id), size(size), type(type), refCount(0), ptr(ptr), isNew(true) {
+        DEBUG_LOG("Created MemoryMap - ID: " << id << ", Size: " << size << ", Type: " << type << ", Ptr: " << ptr);
+    }
 
     //función para imprimir los datos de la estructura
     void print() const {
-        cout << "ID: " << id
+        MEMORY_LOG("MemoryMap - ID: " << id
             << ", Size: " << size
             << ", Type: " << type
             << ", RefCount: " << refCount
-            << ", Ptr: " << ptr << std::endl;
+            << ", Ptr: " << ptr 
+            << ", isNew: " << isNew);
     }
 };
 
@@ -60,7 +69,9 @@ struct Node
 
     //constructuor del nodo
     Node(int id, size_t size, string type, void* ptr)
-        : block(id, size, type, ptr), next(nullptr) {}
+        : block(id, size, type, ptr), next(nullptr) {
+        DEBUG_LOG("Created Node - ID: " << id << ", Size: " << size << ", Type: " << type);
+    }
 };
 
 
@@ -72,12 +83,16 @@ class MemoryList
         Node* last;
     
     public:
-        MemoryList(): head(nullptr), last(nullptr) {}
+        MemoryList(): head(nullptr), last(nullptr) {
+            DEBUG_LOG("MemoryList initialized");
+        }
 
         ~MemoryList() {
+            DEBUG_LOG("MemoryList destructor called");
             Node* current = head;
             while (current != nullptr){
                 Node* nextNode = current->next;
+                DEBUG_LOG("Deleting block - ID: " << current->block.id << ", Ptr: " << current->block.ptr);
                 delete static_cast<char*>(current->block.ptr);
                 delete current;
                 current = nextNode;
@@ -85,119 +100,107 @@ class MemoryList
         }
 
         Node* getHead() const { return head; }
-        void updateHead(Node* newHead) { head = newHead; }
+        void updateHead(Node* newHead) { 
+            DEBUG_LOG("Updating head from " << head << " to " << newHead);
+            head = newHead; 
+        }
         Node* getLast() const { return last; }
 
         void insert(int id, size_t size, const string& type, void* ptr) {
+            DEBUG_LOG("Inserting new block - ID: " << id << ", Size: " << size << ", Type: " << type);
             Node* newNode = new Node(id, size, type, ptr);
             if (!head) {
+                DEBUG_LOG("First node in list");
                 head = last = newNode;
             } else {
+                DEBUG_LOG("Appending to end of list");
                 last->next = newNode;
                 last = newNode;
             }
+            DEBUG_LOG_VAR(head);
+            DEBUG_LOG_VAR(last);
         }
 
         bool insertNextTo(int id, int newId, size_t size, const string& type, void* ptr) {
+            DEBUG_LOG("Attempting to insert next to ID: " << id << ", New ID: " << newId);
             Node* current = head;
             while (current) {
                 if (current->block.id == id) {
-                    // Crear nuevo nodo con el espacio sobrante
+                    DEBUG_LOG("Found target block - ID: " << id);
                     Node* newNode = new Node(newId, size, type, ptr);
                     newNode->next = current->next;
                     current->next = newNode;
+                    DEBUG_LOG("Inserted new block after ID: " << id);
                     return true;
                 }
                 current = current->next;
             }
+            DEBUG_LOG("Target ID not found: " << id);
             return false; // No se encontró el id
         }
 
         MemoryMap* findById(int id) {
+            DEBUG_LOG("Searching for block ID: " << id);
             for (Node* current = head; current != nullptr; current = current->next) {
                 if (current->block.id == id) {
+                    DEBUG_LOG("Found block ID: " << id << " at " << current->block.ptr);
                     return &current->block;
                 }
             }
+            DEBUG_LOG("Block ID not found: " << id);
             return nullptr;
         }
 
-        /*bool removeById(int id) {
-            Node* current = head;
-            Node* previous = nullptr;
-            while (current != nullptr){
-                if (current->block.id == id){
-                    if (previous == nullptr){
-                        head = current->next;
-                    }
-                    else{
-                        previous->next = current->next;
-                    }
-                    delete static_cast<char*>(current->block.ptr);
-                    delete current;
-                    return true;
-                }
-                previous = current;
-                current = current->next;
-            }
-            return false;
-        }*/
-
         bool removeById(int id) {
+            DEBUG_LOG("Attempting to remove block ID: " << id);
             Node* current = head;
             Node* prev = nullptr;
             while (current != nullptr){
                 if (current->block.id == id){
-                    if (current == last) {          // Línea añadida
-                        last = prev;                // Línea añadida
+                    DEBUG_LOG("Found block to remove - ID: " << id);
+                    if (current == last) {
+                        DEBUG_LOG("Block is last in list");
+                        last = prev;
                     }
                     std::memset(current->block.ptr, 0, current->block.size);
                     current->block.isNew = true;
                     current->block.type = "";
+                    DEBUG_LOG("Block marked as free - ID: " << id);
                     return true;
                 }
                 prev = current;
                 current = current->next;
             }
+            DEBUG_LOG("Block to remove not found - ID: " << id);
             return false;
         }
 
         int reuseFreeBlock(size_t size, const string& newType, int newId) {
-            std::cout << "[MemoryList] Buscando bloque libre para reutilizar. Tamaño requerido: " 
-                      << size << ", Tipo: " << newType << std::endl;
+            DEBUG_LOG("Looking for free block - Size needed: " << size << ", Type: " << newType);
             
             Node* current = head;
             while (current) {
                 if (current->block.type == "" && current->block.size >= size) {
-                    std::cout << "[MemoryList] Bloque libre encontrado - ID: " << current->block.id
-                              << ", Tamaño: " << current->block.size << std::endl;
+                    DEBUG_LOG("Found free block - ID: " << current->block.id << ", Size: " << current->block.size);
                     
-                    // Tamaño exacto
                     if (current->block.size == size) {
-                        std::cout << "[MemoryList] Reutilizando bloque completo - ID: " 
-                                  << current->block.id << std::endl;
+                        DEBUG_LOG("Exact size match - reusing entire block");
                         current->block.type = newType;
                         return current->block.id;
                     }
-                    // Bloque más grande (dividirlo)
                     else {
-                        std::cout << "[MemoryList] Dividiendo bloque - ID original: " 
-                                  << current->block.id << ", Tamaño original: " << current->block.size << std::endl;
+                        DEBUG_LOG("Splitting block - Original ID: " << current->block.id << ", Size: " << current->block.size);
                         
                         void* blockAddr = current->block.ptr;
                         size_t remainingSize = current->block.size - size;
                         void* remainingAddr = static_cast<char*>(blockAddr) + size;
                         
-                        // Actualizar bloque actual
                         current->block.size = size;
                         current->block.type = newType;
                         
-                        std::cout << "[MemoryList] Bloque actualizado - Nuevo tamaño: " 
-                                  << current->block.size << ", Nuevo tipo: " << current->block.type << std::endl;
-                        std::cout << "[MemoryList] Creando nuevo bloque libre - Tamaño: " 
-                                  << remainingSize << ", Dirección: " << remainingAddr << std::endl;
+                        DEBUG_LOG("Updated block - New size: " << current->block.size << ", New type: " << current->block.type);
+                        DEBUG_LOG("Creating new free block - Size: " << remainingSize << ", Addr: " << remainingAddr);
                         
-                        // Insertar espacio sobrante como nuevo nodo libre
                         insertNextTo(current->block.id, newId, remainingSize, "", remainingAddr);
                         return current->block.id;
                     }
@@ -205,11 +208,12 @@ class MemoryList
                 current = current->next;
             }
             
-            std::cout << "[MemoryList] No se encontraron bloques libres adecuados" << std::endl;
+            DEBUG_LOG("No suitable free blocks found");
             return -1;
         }
 
         void printList() {
+            DEBUG_LOG("Memory List Contents:");
             Node* current = head;
             while (current != nullptr) {
                 current->block.print(); 
@@ -228,111 +232,108 @@ class MemoryBlock {
         int nextId=0;
 
         void* GetLastFreeAddr() {
+            DEBUG_LOG("Calculating last free address");
             Node* lastNode = memList.getLast();
             if (!lastNode) {
                 memAtEnd = memSize;
+                DEBUG_LOG("No blocks - returning start of memory: " << memBlock);
                 return memBlock;
             }
         
-            // Cálculo seguro (cambios aquí)
             char* lastBlockEnd = static_cast<char*>(lastNode->block.ptr) + lastNode->block.size;
             char* totalEnd = static_cast<char*>(memBlock) + memSize;
             memAtEnd = (lastBlockEnd >= totalEnd) ? 0 : totalEnd - lastBlockEnd;
+            
+            DEBUG_LOG("Last block ends at: " << (void*)lastBlockEnd);
+            DEBUG_LOG("Total memory ends at: " << (void*)totalEnd);
+            DEBUG_LOG("memAtEnd calculated as: " << memAtEnd);
             
             return (memAtEnd > 0) ? lastBlockEnd : nullptr;
         }
 
     public:
         MemoryBlock(size_t sizeMB){
+            DEBUG_LOG("Initializing MemoryBlock with size: " << sizeMB << "MB");
             memSize = sizeMB * 1024 * 1024;
             memBlock = malloc(memSize);
             if (!memBlock) {
-                cout << "Error al reservar la memoria";
+                ERROR_LOG("Failed to allocate memory block");
+                throw std::runtime_error("Error al reservar la memoria");
             }
             usedMem = 0;
             memAtEnd = memSize;
+            DEBUG_LOG("MemoryBlock initialized - Total size: " << memSize << ", Start addr: " << memBlock);
         }
 
         ~MemoryBlock(){
+            DEBUG_LOG("MemoryBlock destructor called");
             free(memBlock);
         }
 
         int Create(size_t size, const string& type) {
-            std::cout << "[MemoryBlock] Creando bloque - Tipo: " << type << ", Tamaño: " << size << std::endl;
+            DEBUG_LOG("Create request - Type: " << type << ", Size: " << size);
             
-            // Validación de memoria total
             if (usedMem + size > memSize) {
-                std::cout << "[MemoryBlock] ERROR: No hay espacio suficiente. Usado: " 
-                          << usedMem << "/" << memSize << std::endl;
+                ERROR_LOG("Not enough space - Used: " << usedMem << "/" << memSize);
                 throw std::runtime_error("No hay espacio suficiente");
             }
         
-            std::cout << "[MemoryBlock] Verificando espacio contiguo al final. memAtEnd: " 
-                      << memAtEnd << std::endl;
+            DEBUG_LOG("Checking contiguous space at end. memAtEnd: " << memAtEnd);
             
-            // Verificar espacio contiguo al final
             if (size <= memAtEnd) {
-                std::cout << "[MemoryBlock] Asignando espacio contiguo al final" << std::endl;
+                DEBUG_LOG("Allocating at end of memory");
                 void* addr = GetLastFreeAddr();
-                std::cout << "[MemoryBlock] Dirección asignada: " << addr << std::endl;
+                DEBUG_LOG("Allocated address: " << addr);
                 
                 memList.insert(nextId, size, type, addr);
                 usedMem += size;
                 memAtEnd -= size;
                 
-                std::cout << "[MemoryBlock] Bloque creado. ID: " << nextId 
-                          << ", Memoria usada: " << usedMem 
-                          << ", Memoria libre al final: " << memAtEnd << std::endl;
+                DEBUG_LOG("Block created - ID: " << nextId 
+                          << ", Used memory: " << usedMem 
+                          << ", Remaining at end: " << memAtEnd);
                 return nextId++;
             }
         
             size_t freeBlockSize = (memSize - usedMem) - memAtEnd;
-            std::cout << "[MemoryBlock] Espacio libre entre bloques: " << freeBlockSize << std::endl;
+            DEBUG_LOG("Free space between blocks: " << freeBlockSize);
         
-            // Intentar reutilizar bloques libres
             if (freeBlockSize >= size) {
-                std::cout << "[MemoryBlock] Intentando reutilizar bloque libre existente" << std::endl;
+                DEBUG_LOG("Attempting to reuse free block");
                 int reusedId = memList.reuseFreeBlock(size, type, nextId);
                 if (reusedId > -1) {
                     nextId++;
-                    std::cout << "[MemoryBlock] Bloque reutilizado. ID: " << reusedId 
-                              << ", Memoria usada: " << usedMem << std::endl;
+                    DEBUG_LOG("Block reused - ID: " << reusedId << ", Used memory: " << usedMem);
                     return reusedId;
                 }
             }
         
-            // Intentar compactación si no hay espacio suficiente
             if (freeBlockSize + memAtEnd >= size) {
-                std::cout << "[MemoryBlock] Intentando compactar memoria para hacer espacio" << std::endl;
+                DEBUG_LOG("Attempting memory compaction");
                 CompactMemory();
-                if (memAtEnd > memSize - usedMem) {  // Línea añadida
-                    memAtEnd = memSize - usedMem;    // Línea añadida (corrección forzada)
+                if (memAtEnd > memSize - usedMem) {
+                    memAtEnd = memSize - usedMem;
                 }
                 void* addr = GetLastFreeAddr();
-                std::cout << "[MemoryBlock] Dirección asignada post-compactación: " << addr << std::endl;
+                DEBUG_LOG("Allocated address after compaction: " << addr);
                 
                 memList.insert(nextId, size, type, addr);
                 usedMem += size;
                 memAtEnd -= size;
                 
-                std::cout << "[MemoryBlock] Bloque creado después de compactación. ID: " << nextId 
-                          << ", Memoria usada: " << usedMem 
-                          << ", Memoria libre al final: " << memAtEnd << std::endl;
+                DEBUG_LOG("Block created after compaction - ID: " << nextId 
+                          << ", Used memory: " << usedMem 
+                          << ", Remaining at end: " << memAtEnd);
                 return nextId++;
             }
         
-            std::cout << "[MemoryBlock] ERROR: No se pudo asignar memoria después de todos los intentos" << std::endl;
+            ERROR_LOG("Failed to allocate memory after all attempts");
             throw std::runtime_error("No se pudo asignar memoria");
         }
 
-
-
         void CompactMemory() {
-            std::cout << "\n[MemoryBlock] INICIANDO COMPACTACIÓN DE MEMORIA" << std::endl;
-            std::cout << "[MemoryBlock] Estado antes de compactar:" << std::endl;
-            std::cout << " - Memoria total: " << memSize << std::endl;
-            std::cout << " - Memoria usada: " << usedMem << std::endl;
-            std::cout << " - Memoria libre al final: " << memAtEnd << std::endl;
+            DEBUG_LOG("Starting memory compaction");
+            DEBUG_LOG("Initial state - Total: " << memSize << ", Used: " << usedMem << ", Free at end: " << memAtEnd);
             memList.printList();
         
             Node* current = memList.getHead();
@@ -342,13 +343,11 @@ class MemoryBlock {
             size_t movedBlocks = 0;
             size_t freedBlocks = 0;
         
-            std::cout << "[MemoryBlock] Posición inicial: " << (void*)currentPos << std::endl;
+            DEBUG_LOG("Starting position: " << (void*)currentPos);
         
             while (current) {
                 if (current->block.type == "") {
-                    // Bloque libre encontrado
-                    std::cout << "[MemoryBlock] Eliminando bloque libre - ID: " 
-                              << current->block.id << ", Tamaño: " << current->block.size << std::endl;
+                    DEBUG_LOG("Freeing block - ID: " << current->block.id << ", Size: " << current->block.size);
                     
                     Node* toDelete = current;
                     freeSpace += current->block.size;
@@ -363,14 +362,13 @@ class MemoryBlock {
                     current = current->next;
                     delete toDelete;
                 } else {
-                    // Bloque ocupado
                     if (freeSpace > 0) {
                         void* oldPos = current->block.ptr;
                         void* newPos = currentPos;
                         
-                        std::cout << "[MemoryBlock] Moviendo bloque - ID: " << current->block.id
-                                  << "\n   De: " << oldPos << " a " << newPos
-                                  << "\n   Tamaño: " << current->block.size << std::endl;
+                        DEBUG_LOG("Moving block - ID: " << current->block.id
+                                  << " from " << oldPos << " to " << newPos
+                                  << ", Size: " << current->block.size);
                         
                         memmove(newPos, oldPos, current->block.size);
                         current->block.ptr = newPos;
@@ -385,84 +383,94 @@ class MemoryBlock {
         
             memAtEnd = memSize - (currentPos - static_cast<char*>(memBlock));
             
-            std::cout << "\n[MemoryBlock] COMPACTACIÓN COMPLETADA" << std::endl;
-            std::cout << " - Bloques movidos: " << movedBlocks << std::endl;
-            std::cout << " - Bloques liberados: " << freedBlocks << std::endl;
-            std::cout << " - Espacio libre recuperado: " << freeSpace << std::endl;
-            std::cout << " - Nueva memoria libre al final: " << memAtEnd << std::endl;
-            std::cout << "Estado después de compactar:" << std::endl;
+            DEBUG_LOG("Compaction completed");
+            DEBUG_LOG("Blocks moved: " << movedBlocks);
+            DEBUG_LOG("Blocks freed: " << freedBlocks);
+            DEBUG_LOG("Recovered space: " << freeSpace);
+            DEBUG_LOG("New free space at end: " << memAtEnd);
+            DEBUG_LOG("Final state:");
             memList.printList();
         }
 
-        // Versión específica para datos binarios (reemplaza al template)
         void Set(int id, const std::string& serialized_data) {
+            DEBUG_LOG("Set request - ID: " << id << ", Data size: " << serialized_data.size());
             MemoryMap* block = memList.findById(id);
             if (!block) {
+                ERROR_LOG("Block not found - ID: " << id);
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }
             if (serialized_data.size() > block->size) {
+                ERROR_LOG("Data too large for block - Block size: " << block->size << ", Data size: " << serialized_data.size());
                 throw std::runtime_error("Datos exceden el tamaño del bloque");
             }
-            // Copia directa de los bytes
             std::memcpy(block->ptr, serialized_data.data(), block->size);
             block->isNew = false;
+            DEBUG_LOG("Data set successfully in block ID: " << id);
         }
 
         std::string Get(int id) {
+            DEBUG_LOG("Get request - ID: " << id);
             MemoryMap* block = memList.findById(id);
             if (!block) {
+                ERROR_LOG("Block not found - ID: " << id);
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }
-            // Creamos un string con el contenido binario del bloque
+            DEBUG_LOG("Returning data from block ID: " << id << ", Size: " << block->size);
             return std::string(static_cast<char*>(block->ptr), block->size);
         }
 
         void CleanMemorySpace(MemoryMap* block){
+            DEBUG_LOG("Cleaning memory space - ID: " << block->id << ", RefCount: " << block->refCount);
             if (block->refCount == 0) {
                 size_t freedSize = block->size;
                 void* freedPtr = block->ptr;
                 bool wasLastBlock = (memList.getLast() && memList.getLast()->block.id == block->id);  
-                // Liberar el bloque
+                
                 if (memList.removeById(block->id)) {
                     usedMem -= freedSize;
                     if (wasLastBlock) { 
                         memAtEnd += freedSize;
                     }
+                    DEBUG_LOG("Memory cleaned - ID: " << block->id << ", Freed size: " << freedSize);
                 } 
                 else {
-                    std::cerr << "[MemoryBlock] ERROR: No se pudo remover el bloque" << std::endl;
+                    ERROR_LOG("Failed to remove block - ID: " << block->id);
                 }
             }
         }
 
         void DecreaseRefCount(int id) {
-            // Buscar el bloque de memoria
+            DEBUG_LOG("Decreasing ref count - ID: " << id);
             MemoryMap* block = memList.findById(id);
             if (!block) {
-                std::cerr << "[MemoryBlock] ERROR: Bloque ID " << id << " no encontrado" << std::endl;
+                ERROR_LOG("Block not found - ID: " << id);
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }    
-            // Decrementar el contador
             --block->refCount;
+            DEBUG_LOG("New ref count for ID " << id << ": " << block->refCount);
+            if (block->refCount == 0) {
+                CleanMemorySpace(block);
+            }
         }
         
         void IncreaseRefCount(int id) {
-            // Buscar el bloque de memoria
+            DEBUG_LOG("Increasing ref count - ID: " << id);
             MemoryMap* block = memList.findById(id);
             if (!block) {
-                std::cerr << "[MemoryBlock] ERROR: Bloque ID " << id << " no encontrado" << std::endl;
+                ERROR_LOG("Block not found - ID: " << id);
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }
-            // Incrementar el contador
-            block->refCount++;
+            ++block->refCount;
+            DEBUG_LOG("New ref count for ID " << id << ": " << block->refCount);
         }
 
         MemoryMap* GetMemoryMapById(int id) {
+            DEBUG_LOG("GetMemoryMapById request - ID: " << id);
             return memList.findById(id);
         }
 
         void PrintMemoryList() {
-            cout << "Contenido de la lista de MemoryBlock:" << std::endl;
+            DEBUG_LOG("Printing memory list");
             memList.printList();
         }
 };
@@ -470,160 +478,134 @@ class MemoryBlock {
 
 class MemoryManagerServiceImpl final : public MemoryManager::Service {
     public:
-        MemoryManagerServiceImpl(MemoryBlock& memoryBlock) : memoryBlock_(memoryBlock) {}
+        MemoryManagerServiceImpl(MemoryBlock& memoryBlock) : memoryBlock_(memoryBlock) {
+            DEBUG_LOG("MemoryManagerServiceImpl initialized");
+        }
     
-        Status Create(ServerContext* context, const CreateRequest* request, CreateResponse* response)
-        override {
-            //cout
-            std::cout << "[Servidor] Recibida solicitud Create - Tipo: " << request->type() 
-                      << ", Tamaño: " << request->size() << std::endl;
+        Status Create(ServerContext* context, const CreateRequest* request, CreateResponse* response) override {
+            DEBUG_LOG("Create request - Type: " << request->type() << ", Size: " << request->size());
             try {
                 int id = memoryBlock_.Create(request->size(), request->type());
-                //cout
-                std::cout << "[Servidor] Bloque creado exitosamente - ID: " << id << std::endl;
+                DEBUG_LOG("Create successful - ID: " << id);
                 response->set_success(true);
                 response->set_id(id);
             } catch (const std::exception& e) {
-                //cout std::cerr << "[Servidor] Error en Create: " << e.what() << std::endl;
+                ERROR_LOG("Create failed: " << e.what());
                 response->set_success(false);
             }
             return Status::OK;
         }
     
-        Status Set(ServerContext* context, const SetRequest* request, SetResponse* response)
-        override {
+        Status Set(ServerContext* context, const SetRequest* request, SetResponse* response) override {
+            DEBUG_LOG("Set request - ID: " << request->id() << ", Data size: " << request->data().size());
             try {
-                // Obtener los datos serializados del request
-                const std::string& serialized_data = request->data();
-                // Almacenar los datos directamente como bytes/bloque binario
-                memoryBlock_.Set(request->id(), serialized_data);
-                response->set_success(true);
-                std::cout << "[Servidor] Datos asignados exitosamente" << std::endl;
+                memoryBlock_.Set(request->id(), request->data());
+                DEBUG_LOG("Set successful - ID: " << request->id());
                 response->set_success(true);
             } 
             catch (const std::exception& e) {
-                std::cerr << "[Servidor] Error en Set: " << e.what() << std::endl;
+                ERROR_LOG("Set failed: " << e.what());
                 response->set_success(false);
             }
             return Status::OK;
         }
     
-        Status Get(ServerContext* context, const GetRequest* request, GetResponse* response) 
-        override {
+        Status Get(ServerContext* context, const GetRequest* request, GetResponse* response) override {
+            DEBUG_LOG("Get request - ID: " << request->id());
             try {
                 MemoryMap* block = memoryBlock_.GetMemoryMapById(request->id());
                 if (!block) {
+                    DEBUG_LOG("Get failed - Block not found");
                     response->set_success(false);
                     return Status::OK;
                 }
 
-
-                // Obtenemos los datos como binario crudo
                 std::string binary_data = memoryBlock_.Get(request->id());
+                DEBUG_LOG("Get successful - ID: " << request->id() << ", Data size: " << binary_data.size());
                 response->set_success(true);
-                response->set_data(binary_data);  // Campo 'data' de tipo bytes en el proto
+                response->set_data(binary_data);
             } 
             catch (const std::exception& e) {
-                std::cerr << "[Servidor] Error en Get: " << e.what() << std::endl;
+                ERROR_LOG("Get failed: " << e.what());
                 response->set_success(false);
             }
             return Status::OK;
         }
 
-        Status IncreaseRefCount(ServerContext* context, const IncreaseRefCountRequest* request, IncreaseRefCountResponse* response)
-         override {
-            std::cout << "[Servidor] Incrementando ref count - ID: " << request->id() << std::endl;
+        Status IncreaseRefCount(ServerContext* context, const IncreaseRefCountRequest* request, IncreaseRefCountResponse* response) override {
+            DEBUG_LOG("IncreaseRefCount request - ID: " << request->id());
             try {
-            memoryBlock_.IncreaseRefCount(request->id());
-            response->set_success(true);
+                memoryBlock_.IncreaseRefCount(request->id());
+                DEBUG_LOG("IncreaseRefCount successful");
+                response->set_success(true);
             } catch (const std::exception& e) {
-            std::cerr << "[Servidor] Error en IncreaseRefCount: " << e.what() << std::endl;
-            response->set_success(false);
+                ERROR_LOG("IncreaseRefCount failed: " << e.what());
+                response->set_success(false);
             }
             return Status::OK;
         }
 
-        Status DecreaseRefCount(ServerContext* context, const DecreaseRefCountRequest* request, DecreaseRefCountResponse* response) 
-        override {
-            std::cout << "[Servidor] Decrementando ref count - ID: " << request->id() << std::endl;
+        Status DecreaseRefCount(ServerContext* context, const DecreaseRefCountRequest* request, DecreaseRefCountResponse* response) override {
+            DEBUG_LOG("DecreaseRefCount request - ID: " << request->id());
             try {
-            memoryBlock_.DecreaseRefCount(request->id());
-            response->set_success(true);
+                memoryBlock_.DecreaseRefCount(request->id());
+                DEBUG_LOG("DecreaseRefCount successful");
+                response->set_success(true);
             } catch (const std::exception& e) {
-            std::cerr << "[Servidor] Error en DecreaseRefCount: " << e.what() << std::endl;
-            response->set_success(false);
+                ERROR_LOG("DecreaseRefCount failed: " << e.what());
+                response->set_success(false);
             }
             return Status::OK;
         }
      
     private:
         MemoryBlock& memoryBlock_;
+};
+    
+void RunServer(const std::string& listenPort, size_t memSize) {
+    DEBUG_LOG("Starting server on port: " << listenPort << " with memory size: " << memSize << "MB");
+    MemoryBlock memoryBlock(memSize);
 
-        // Serialización binaria cruda (siempre del mismo tamaño que el tipo)
-        template <typename T>
-        std::string SerializarExacto(const T& dato) {
-            static_assert(std::is_trivially_copyable_v<T>, 
-                        "El tipo debe ser trivialmente copiable");
-            
-            return std::string(reinterpret_cast<const char*>(&dato), 
-                            reinterpret_cast<const char*>(&dato) + sizeof(T));
-        }
+    MemoryManagerServiceImpl service(memoryBlock);
 
-        // Deserialización binaria cruda
-        template <typename T>
-        T DeserializarExacto(const std::string& binario) {
-            static_assert(std::is_trivially_copyable_v<T>,
-                        "El tipo debe ser trivialmente copiable");
-            
-            T resultado;
-            std::memcpy(&resultado, binario.data(), sizeof(T));
-            return resultado;
-        }
-    };
+    ServerBuilder builder;
+    builder.AddListeningPort("0.0.0.0:" + listenPort, grpc::InsecureServerCredentials());
+    builder.RegisterService(&service);
+
+    std::unique_ptr<Server> server(builder.BuildAndStart());
+    DEBUG_LOG("Server listening on port " << listenPort);
+    server->Wait();
+}
     
-    void RunServer(const std::string& listenPort, size_t memSize) {
-        MemoryBlock memoryBlock(memSize); // Inicializa el MemoryBlock con el tamaño especificado
-    
-        MemoryManagerServiceImpl service(memoryBlock);
-    
-        ServerBuilder builder;
-        builder.AddListeningPort("0.0.0.0:" + listenPort, grpc::InsecureServerCredentials());
-        builder.RegisterService(&service);
-    
-        std::unique_ptr<Server> server(builder.BuildAndStart());
-        std::cout << "Servidor escuchando en el puerto " << listenPort << std::endl;
-        server->Wait();
+int main(int argc, char** argv) {
+    if (argc != 7) {
+        ERROR_LOG("Invalid arguments. Usage: " << argv[0] << " --port LISTEN_PORT --memsize SIZE_MB --dumpFolder DUMP_FOLDER");
+        return 1;
     }
-    
-    int main(int argc, char** argv) {
-        if (argc != 7) {
-            std::cerr << "Uso: " << argv[0] << " --port LISTEN_PORT --memsize SIZE_MB --dumpFolder DUMP_FOLDER" << std::endl;
+
+    std::string listenPort;
+    size_t memSize = 0;
+    std::string dumpFolder;
+
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "--port" && i + 1 < argc) {
+            listenPort = argv[++i];
+        } else if (arg == "--memsize" && i + 1 < argc) {
+            memSize = std::stoul(argv[++i]);
+        } else if (arg == "--dumpFolder" && i + 1 < argc) {
+            dumpFolder = argv[++i];
+        } else {
+            ERROR_LOG("Unknown argument or missing value: " << arg);
             return 1;
         }
-    
-        std::string listenPort;
-        size_t memSize = 0;
-        std::string dumpFolder;
-    
-        for (int i = 1; i < argc; i++) {
-            std::string arg = argv[i];
-            if (arg == "--port" && i + 1 < argc) {
-                listenPort = argv[++i];
-            } else if (arg == "--memsize" && i + 1 < argc) {
-                memSize = std::stoul(argv[++i]);
-            } else if (arg == "--dumpFolder" && i + 1 < argc) {
-                dumpFolder = argv[++i];
-            } else {
-                std::cerr << "Argumento desconocido o valor faltante: " << arg << std::endl;
-                return 1;
-            }
-        }
-    
-        if (listenPort.empty() || memSize == 0 || dumpFolder.empty()) {
-            std::cerr << "Faltan parámetros requeridos." << std::endl;
-            return 1;
-        }
-    
-        RunServer(listenPort, memSize);
-        return 0;
     }
+
+    if (listenPort.empty() || memSize == 0 || dumpFolder.empty()) {
+        ERROR_LOG("Missing required parameters");
+        return 1;
+    }
+
+    RunServer(listenPort, memSize);
+    return 0;
+}
