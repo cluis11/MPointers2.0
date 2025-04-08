@@ -1,7 +1,10 @@
 #pragma once
+#include <iostream>
 #include <string>
+#include <mutex>
 
 struct MemoryMap {
+	std::mutex blockMutex;
 	int id;
 	std::size_t size;
 	std::string type;

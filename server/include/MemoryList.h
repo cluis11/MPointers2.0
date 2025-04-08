@@ -1,11 +1,15 @@
 #pragma once
 #include "MemoryMap.h"
+#include <iostream>
 #include <string>
+#include <mutex>
+
 
 class MemoryList {
 	private:
 		Node* head;
 		Node* last;
+		std::mutex mtx;
 
 	//Métodos
 	public:

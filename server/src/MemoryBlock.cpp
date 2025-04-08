@@ -17,14 +17,15 @@ void* MemoryBlock::GetLastFreeAddr() {
     return (memAtEnd > 0) ? lastBlockEnd : nullptr;
 }
 
-MemoryBlock::MemoryBlock(size_t sizeMB) {
-    memSize = 256;
-    memBlock = malloc(256);
+MemoryBlock::MemoryBlock(size_t sizeMB, const std::string& dumpFolder)
+    : memSize(256), memList(), dumps(dumpFolder, memList) {
+    memBlock = malloc(memSize);
     if (!memBlock) {
         std::cout << "Error al reservar la memoria";
     }
     usedMem = 0;
     memAtEnd = memSize;
+    //dumps.CreateDump();
 }
 
 MemoryBlock::~MemoryBlock() {
@@ -57,6 +58,7 @@ int MemoryBlock::Create(std::size_t size, const std::string& type) {
         std::cout << "[MemoryBlock] Bloque creado. ID: " << nextId
             << ", Memoria usada: " << usedMem
             << ", Memoria libre al final: " << memAtEnd << std::endl;
+        dumps.CreateDump();
         return nextId++;
     }
 

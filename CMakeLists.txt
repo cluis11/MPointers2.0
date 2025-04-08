@@ -34,6 +34,7 @@ set(SERVER_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/server/src/MemoryManager.cpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/server/src/MemoryMap.cpp"  
     "${CMAKE_CURRENT_SOURCE_DIR}/server/src/Server.cpp"  
+    "${CMAKE_CURRENT_SOURCE_DIR}/server/src/MemoryDump.cpp"  
 )
 
 message(STATUS "SERVER_SRCS: ${SERVER_SRCS}")

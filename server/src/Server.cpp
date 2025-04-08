@@ -2,8 +2,8 @@
 #include <grpcpp/grpcpp.h> 
 #include <iostream>
 
-void MemoryServer::Run(const std::string& listenPort, std::size_t memSize) {
-    MemoryBlock memoryBlock(memSize); // Inicializa el MemoryBlock con el tamaño especificado
+void MemoryServer::Run(const std::string& listenPort, std::size_t memSize, std::string folder) {
+    MemoryBlock memoryBlock(memSize, folder); // Inicializa el MemoryBlock con el tamaño especificado
 
     MemoryManagerServiceImpl service(memoryBlock);
 

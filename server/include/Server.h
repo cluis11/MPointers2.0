@@ -5,5 +5,5 @@
 
 class MemoryServer {
 	public:
-		static void Run(const std::string& listenPort, std::size_t memSize);
+		static void Run(const std::string& listenPort, std::size_t memSize, std::string folder);
 };

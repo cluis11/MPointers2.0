@@ -1,6 +1,7 @@
 #pragma once 
 #include "MemoryList.h"
 #include "NodeStructure.h"
+#include "MemoryDump.h"
 #include <string>
 
 class MemoryBlock {
@@ -10,6 +11,7 @@ class MemoryBlock {
 		std::size_t usedMem;
 		std::size_t memAtEnd;
 		MemoryList memList;
+		MemoryDump dumps;
 		int nextId = 0;
 
 		//Métodos private
@@ -17,7 +19,7 @@ class MemoryBlock {
 
 	//Métodos
 	public:
-		MemoryBlock(std::size_t sizeMB);
+		MemoryBlock(std::size_t sizeMB, const std::string& dumpFolder);
 		~MemoryBlock();
 		int Create(std::size_t size, const std::string& type);
 		void CompactMemory();
@@ -26,8 +28,10 @@ class MemoryBlock {
 			MemoryMap* block = memList.findById(id);
 			if (!block) throw std::runtime_error("Bloque no encontrado");
 			if (sizeof(T) > block->size) throw std::runtime_error("Tamaño excedido");
+			std::lock_guard<std::mutex> lock(block->blockMutex);
 			*static_cast<T*>(block->ptr) = value;
 			block->isNew = false;
+			dumps.CreateDump();
 		}
 
 		template <typename T>

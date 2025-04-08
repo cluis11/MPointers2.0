@@ -4,6 +4,7 @@
 MemoryList::MemoryList() : head(nullptr), last(nullptr) { }
 
 MemoryList::~MemoryList() {
+    std::lock_guard<std::mutex> lock(mtx);
     Node* current = head;
     while (current != nullptr) {
         Node* nextNode = current->next;
@@ -18,6 +19,7 @@ void MemoryList::updateHead(Node* newHead) { head = newHead; }
 Node* MemoryList::getLast() const { return last; }
 
 void MemoryList::insert(int id, std::size_t size, const std::string& type, void* ptr) {
+    std::lock_guard<std::mutex> lock(mtx);
     Node* newNode = new Node(id, size, type, ptr);
     if (!head) {
         head = last = newNode;
@@ -44,6 +46,7 @@ bool MemoryList::insertNextTo(int id, int newId, std::size_t size, const std::st
 }
 
 MemoryMap* MemoryList::findById(int id) {
+    std::lock_guard<std::mutex> lock(mtx);
     for (Node* current = head; current != nullptr; current = current->next) {
         if (current->block.id == id) {
             return &current->block;
@@ -53,6 +56,7 @@ MemoryMap* MemoryList::findById(int id) {
 }
 
 bool MemoryList::removeById(int id) {
+    std::lock_guard<std::mutex> lock(mtx);
     Node* current = head;
     Node* prev = nullptr;
     while (current != nullptr) {
@@ -74,7 +78,8 @@ bool MemoryList::removeById(int id) {
 int MemoryList::reuseFreeBlock(size_t size, const std::string& newType, int newId) {
     std::cout << "[MemoryList] Buscando bloque libre para reutilizar. Tamaño requerido: "
         << size << ", Tipo: " << newType << std::endl;
-
+    
+    std::lock_guard<std::mutex> lock(mtx);
     Node* current = head;
     while (current) {
         if (current->block.type == "" && current->block.size >= size) {
@@ -119,6 +124,7 @@ int MemoryList::reuseFreeBlock(size_t size, const std::string& newType, int newI
 }
 
 void MemoryList::printList() {
+    std::lock_guard<std::mutex> lock(mtx);
     Node* current = head;
     while (current != nullptr) {
         current->block.print();

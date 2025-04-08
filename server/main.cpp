@@ -10,6 +10,7 @@ int main(int argc, char** argv) {
     std::string listenPort;
     std::size_t memSize = 0;
     std::string dumpFolder;
+    std::string folder;
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -33,6 +34,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    MemoryServer::Run(listenPort, memSize);
+    folder = "." + dumpFolder;
+    MemoryServer::Run(listenPort, memSize, folder);
     return 0;
 }
