@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <stdexcept>
 
+#define MP_DEBUG_LOG(msg) std::cout << "[DEBUG] " << msg << std::endl;
 
 class MemoryManagerClient {
 public:
@@ -55,7 +56,13 @@ public:
         if (!status.ok() || !response.success()) {
             throw std::runtime_error("Get failed");
         }
-        return DeserializarExacto<T>(response.data());
+
+        T resultado = DeserializarExacto<T>(response.data());
+
+        // 🐞 Debug log del resultado
+        MP_DEBUG_LOG("Valor obtenido del servidor: " << resultado);
+
+        return resultado;
     }
 
     // Operaciones de referencias
@@ -102,7 +109,16 @@ private:
     T DeserializarExacto(const std::string& binario) {
         static_assert(std::is_trivially_copyable_v<T>,
                     "El tipo debe ser trivialmente copiable");
-        
+
+        MP_DEBUG_LOG("sizeof(Node<int>) = " << sizeof(Node<int>));
+        MP_DEBUG_LOG("data.size() = " << binario.size());
+
+        if (binario.size() != sizeof(T)) {
+            MP_DEBUG_LOG("DeserializarExacto: tamaño recibido = " << binario.size());
+            MP_DEBUG_LOG("DeserializarExacto: tamaño esperado = " << sizeof(T));
+            //throw std::runtime_error("DeserializarExacto: tamaño de datos no coincide con el tipo");
+        }
+
         T resultado;
         std::memcpy(&resultado, binario.data(), sizeof(T));
         return resultado;

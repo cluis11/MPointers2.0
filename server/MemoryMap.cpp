@@ -394,18 +394,43 @@ class MemoryBlock {
 
         void Set(int id, const std::string& serialized_data) {
             DEBUG_LOG("Set request - ID: " << id << ", Data size: " << serialized_data.size());
+
+            // 1. Verifica que el bloque existe
             MemoryMap* block = memList.findById(id);
             if (!block) {
                 ERROR_LOG("Block not found - ID: " << id);
                 throw std::runtime_error("Bloque de memoria no encontrado");
             }
+
+            // 2. DEBUG: Imprime información crítica
+            std::cout << "\n=== DEBUG - MemoryBlock::Set() ===" << std::endl;
+            std::cout << "ID: " << id << " | ";
+            std::cout << "Tamaño del bloque: " << block->size << " | ";
+            std::cout << "Tamaño de datos recibidos: " << serialized_data.size() << std::endl;
+
+            std::cout << "Datos recibidos (hex): ";
+            for (char c : serialized_data) {
+                printf("%02x ", static_cast<unsigned char>(c));
+            }
+            std::cout << "\n==============================\n" << std::endl;
+
+            // 3. Verifica tamaño
             if (serialized_data.size() > block->size) {
-                ERROR_LOG("Data too large for block - Block size: " << block->size << ", Data size: " << serialized_data.size());
+                ERROR_LOG("Data too large for block");
                 throw std::runtime_error("Datos exceden el tamaño del bloque");
             }
-            std::memcpy(block->ptr, serialized_data.data(), block->size);
+
+            // 4. Copia los datos
+            std::memcpy(block->ptr, serialized_data.data(), serialized_data.size());
             block->isNew = false;
-            DEBUG_LOG("Data set successfully in block ID: " << id);
+
+            // 5. DEBUG: Verifica que se copió correctamente
+            std::cout << "Contenido después de memcpy (hex): ";
+            unsigned char* ptr = static_cast<unsigned char*>(block->ptr);
+            for (size_t i = 0; i < serialized_data.size(); ++i) {
+                printf("%02x ", ptr[i]);
+            }
+            std::cout << "\n==============================\n" << std::endl;
         }
 
         std::string Get(int id) {
@@ -421,7 +446,7 @@ class MemoryBlock {
 
         void CleanMemorySpace(MemoryMap* block){
             DEBUG_LOG("Cleaning memory space - ID: " << block->id << ", RefCount: " << block->refCount);
-            if (block->refCount == 0) {
+            if (block->refCount <= 0) {
                 size_t freedSize = block->size;
                 void* freedPtr = block->ptr;
                 bool wasLastBlock = (memList.getLast() && memList.getLast()->block.id == block->id);  
@@ -448,7 +473,7 @@ class MemoryBlock {
             }    
             --block->refCount;
             DEBUG_LOG("New ref count for ID " << id << ": " << block->refCount);
-            if (block->refCount == 0) {
+            if (block->refCount <= 0) {
                 CleanMemorySpace(block);
             }
         }
@@ -522,6 +547,35 @@ class MemoryManagerServiceImpl final : public MemoryManager::Service {
 
                 std::string binary_data = memoryBlock_.Get(request->id());
                 DEBUG_LOG("Get successful - ID: " << request->id() << ", Data size: " << binary_data.size());
+                
+                std::cout << "\n=== DEBUG OUTPUT ===" << std::endl;
+                std::cout << "Block ID: " << request->id() << std::endl;
+                std::cout << "Block type: " << block->type << std::endl;
+                std::cout << "Binary size: " << binary_data.size() << " bytes" << std::endl;
+
+                if (block->type == "int") {
+                    int value;
+                    memcpy(&value, binary_data.data(), sizeof(int));
+                    std::cout << "Integer value: " << value << std::endl;
+                }
+                else if (block->type == "float") {
+                    float value;
+                    memcpy(&value, binary_data.data(), sizeof(float));
+                    std::cout << "Float value: " << value << std::endl;
+                }
+                else if (block->type == "string") {
+                    std::cout << "String value: " << binary_data << std::endl;
+                }
+                else if (block->type.find("Node") != std::string::npos) {
+                    std::cout << "Node content (hex dump):" << std::endl;
+                    for (char c : binary_data) {
+                        printf("%02x ", static_cast <unsigned char>(c));
+                    }
+                    std::cout << std::endl;
+                }
+                std::cout << "==========================\n" << std::endl;
+                
+                std::stringstream ss;
                 response->set_success(true);
                 response->set_data(binary_data);
             } 
