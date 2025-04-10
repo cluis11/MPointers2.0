@@ -16,7 +16,7 @@ private:
 public:
     LinkedList() {
         Node<T> head_node{ T(), MPointerID(-1) };  // Construcción explícita
-        head_ = MPointer<Node<T>>::NewNode(head_node);  // Pasar objeto ya construido
+        head_ = MPointer<Node<T>>().NewNode(head_node);  // Pasar objeto ya construido
         MP_DEBUG_LOG("LinkedList creada con nodo cabeza vacío");
     }
 
@@ -28,10 +28,12 @@ public:
         MP_DEBUG_LOG_VAR(new_node.value);
         MP_DEBUG_LOG_VAR(static_cast<int>(new_node.next));
 
-        MPointer<Node<T>> newNode = MPointer<Node<T>>::NewNode(new_node);
+        MPointer<Node<T>> newNode = MPointer<Node<T>>().NewNode(new_node);
         MP_DEBUG_LOG("MPointer<Node> creado para nuevo nodo");
 
+        MP_DEBUG_LOG("Esta es el .next del head: " << head_->next);
         if (static_cast<int>(head_->next) == -1) {
+            MP_DEBUG_LOG("el head.next si es -1");
             head_->next = MPointerID(newNode.GetId());
             MP_DEBUG_LOG("Nuevo nodo asignado como primer elemento después del head");
         }
@@ -73,14 +75,25 @@ public:
     }
 
     T Get(int index) {
-        MP_DEBUG_LOG_VAR(index);
+        MP_DEBUG_LOG_VAR(index);  // Mostramos el valor de `index`
+
         MPointer<Node<T>> current = MPointer<Node<T>>(static_cast<int>(head_->next));
-        int i = 0;
+        //MP_DEBUG_LOG_VAR(current);  // Muestra el nodo inicial (head->next)
+
+        int i = 1;
 
         while (static_cast<int>(current->next) != -1 && i < index) {
-            current = MPointer<Node<T>>(static_cast<int>(current->next));
-            i++;
             MP_DEBUG_LOG("Avanzando en la lista para llegar al índice");
+
+            current = MPointer<Node<T>>(static_cast<int>(current->next));
+            //MP_DEBUG_LOG_VAR(current);  // Muestra el nodo actual en cada iteración
+
+            i++;
+            MP_DEBUG_LOG_VAR(i);  // Muestra el valor de `i` (número de pasos)
+
+            if (static_cast<int>(current->next) == -1) {
+                MP_DEBUG_LOG("Se llegó al final de la lista antes de encontrar el índice");
+            }
         }
 
         if (i != index) {
@@ -88,7 +101,7 @@ public:
             throw std::out_of_range("Índice inválido");
         }
 
-        MP_DEBUG_LOG_VAR(current->value);
+        MP_DEBUG_LOG_VAR(current->value);  // Muestra el valor del nodo actual
         return current->value;
     }
 

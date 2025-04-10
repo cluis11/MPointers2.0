@@ -113,11 +113,11 @@ private:
         MP_DEBUG_LOG("sizeof(Node<int>) = " << sizeof(Node<int>));
         MP_DEBUG_LOG("data.size() = " << binario.size());
 
-        if (binario.size() != sizeof(T)) {
-            MP_DEBUG_LOG("DeserializarExacto: tamaño recibido = " << binario.size());
-            MP_DEBUG_LOG("DeserializarExacto: tamaño esperado = " << sizeof(T));
-            //throw std::runtime_error("DeserializarExacto: tamaño de datos no coincide con el tipo");
-        }
+        //if (binario.size() != sizeof(T)) {
+        //    MP_DEBUG_LOG("DeserializarExacto: tamaño recibido = " << binario.size());
+        //    MP_DEBUG_LOG("DeserializarExacto: tamaño esperado = " << sizeof(T));
+        //    //throw std::runtime_error("DeserializarExacto: tamaño de datos no coincide con el tipo");
+        //}
 
         T resultado;
         std::memcpy(&resultado, binario.data(), sizeof(T));

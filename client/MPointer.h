@@ -74,7 +74,7 @@ private:
         if (static_cast<int>(id_) != -1) {
             //GetClient()->DecreaseRefCount(static_cast<int>(id_));
             MP_MEMORY_LOG("Referencia liberada");
-            id_ = MPointerID(-1);
+            //id_ = MPointerID(-1);
         }
     }
 
@@ -120,7 +120,7 @@ public:
     }
 
     // Métodos estáticos
-    static MPointer New() {
+    MPointer New() {
         MP_DEBUG_LOG("Creando nuevo MPointer");
         int new_id = GetClient()->Create(TypeName(), sizeof(T));
         GetClient()->IncreaseRefCount(new_id);
@@ -128,9 +128,10 @@ public:
         return MPointer(MPointerID(new_id));
     }
 
-    static MPointer<T> NewNode(const T& initial_val) {
+    MPointer<T> NewNode(const T& initial_val) {
         MP_DEBUG_LOG("Creando nuevo MPointer con valor inicial");
         int new_id = GetClient()->Create(TypeName(), sizeof(T));
+
 
         // DEBUG: Verifica el valor ANTES de enviarlo
         std::cout << "Valor a guardar (hex): ";
@@ -143,7 +144,8 @@ public:
         GetClient()->IncreaseRefCount(new_id);
         GetClient()->Set<T>(new_id, initial_val);
         MP_DEBUG_LOG_VAR(new_id);
-
+        id_ = MPointerID(new_id);
+        MP_DEBUG_LOG_VAR(id_);
         return MPointer(MPointerID(new_id));
     }
 
@@ -155,7 +157,7 @@ public:
     }
 
     T* operator->() {
-        MP_DEBUG_LOG("Operador -> llamado con id = " << id_);
+        MP_DEBUG_LOG("Operador -> llamado con id_ = " << id_);
         ValidatePointer();
         MP_DEBUG_LOG_VAR(id_); // Agregado: para rastrear el ID con el que se llama a Get
         if constexpr (std::is_same_v<T, Node<int>> ||
