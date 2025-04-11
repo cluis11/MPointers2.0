@@ -26,6 +26,7 @@ private:
         
         void operator=(const T& value) {
             parent_.GetClient()->Set<T>(static_cast<int>(parent_.id_), value);
+            parent_.GetClient()->IncreaseRefCount(static_cast<int>(parent_.id_));
         }
         
         operator T() {
