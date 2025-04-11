@@ -51,8 +51,18 @@ include_directories(
     ${gRPC_INCLUDE_DIRS}
 )
 
+# Después de include_directories
+
+
 # Ejecutable del servidor
 add_executable(mem-mgr ${SERVER_SRCS})
+
+target_include_directories(mem-mgr PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/server/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/proto
+    ${Protobuf_INCLUDE_DIRS}
+    ${gRPC_INCLUDE_DIRS}
+) 
 target_link_libraries(mem-mgr
     PRIVATE
     gRPC::grpc++

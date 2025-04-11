@@ -1,4 +1,6 @@
 #include "../include/GarbageCollector.h"
+#include "../include/MemoryBlock.h"
+#include "../include/MemoryList.h"
 #include <chrono>
 #include <iostream>
 
