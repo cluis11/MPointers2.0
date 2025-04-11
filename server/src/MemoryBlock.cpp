@@ -40,6 +40,7 @@ void* MemoryBlock::GetLastFreeAddr() {
 }
 
 int MemoryBlock::Create(size_t size, const std::string& type) {
+    std::string strCreate = "Create";
     if (usedMem + size > memSize) {
         throw std::runtime_error("Not enough space");
     }
@@ -49,7 +50,7 @@ int MemoryBlock::Create(size_t size, const std::string& type) {
         memList.insert(nextId, size, type, addr);
         usedMem += size;
         memAtEnd -= size;
-        dumps.CreateDump();
+        dumps.CreateDump(strCreate);
         return nextId++;
     }
     
@@ -59,7 +60,7 @@ int MemoryBlock::Create(size_t size, const std::string& type) {
         int reusedId = memList.reuseFreeBlock(size, type, nextId);
         if (reusedId > -1) {
             nextId++;
-            dumps.CreateDump();
+            dumps.CreateDump(strCreate);
             return reusedId;
         }
     }
@@ -73,7 +74,7 @@ int MemoryBlock::Create(size_t size, const std::string& type) {
         memList.insert(nextId, size, type, addr);
         usedMem += size;
         memAtEnd -= size;
-        dumps.CreateDump();
+        dumps.CreateDump(strCreate);
         return nextId++;
     }
     
@@ -116,6 +117,7 @@ void MemoryBlock::CompactMemory() {
 }
 
 void MemoryBlock::Set(int id, const std::string& serialized_data) {
+    std::string strSet = "Set";
     MemoryMap* block = memList.findById(id);
     if (!block) {
         throw std::runtime_error("Memory block not found");
@@ -125,15 +127,16 @@ void MemoryBlock::Set(int id, const std::string& serialized_data) {
     }
     std::memcpy(block->ptr, serialized_data.data(), block->size);
     block->isNew = false;
-    dumps.CreateDump();
+    dumps.CreateDump(strSet);
 }
 
 std::string MemoryBlock::Get(int id) {
+    std::string strGet = "Get";
     MemoryMap* block = memList.findById(id);
     if (!block) {
         throw std::runtime_error("Memory block not found");
     }
-    dumps.CreateDump();
+    dumps.CreateDump(strGet);
     return std::string(static_cast<char*>(block->ptr), block->size);
 }
 
@@ -161,25 +164,27 @@ void MemoryBlock::CleanMemorySpace(MemoryMap* block) {
 
 
 void MemoryBlock::DecreaseRefCount(int id) {
+    std::string strRef = "Decrease";
     MemoryMap* block = memList.findById(id);
     if (!block) {
         throw std::runtime_error("Memory block not found");
     }    
     --block->refCount;
-    dumps.CreateDump();
+    dumps.CreateDump(strRef);
     if (block->refCount == 0) {
         CleanMemorySpace(block);
-        dumps.CreateDump();
+        dumps.CreateDump(strRef);
     }
 }
 
 void MemoryBlock::IncreaseRefCount(int id) {
+    std::string strRef = "Increase";
     MemoryMap* block = memList.findById(id);
     if (!block) {
         throw std::runtime_error("Memory block not found");
     }
     ++block->refCount;
-    dumps.CreateDump();
+    dumps.CreateDump(strRef);
 }
 
 MemoryMap* MemoryBlock::GetMemoryMapById(int id) {

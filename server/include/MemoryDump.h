@@ -9,6 +9,6 @@ class MemoryDump {
 
 	public:
 		MemoryDump(std::string folder, MemoryList& list);
-		void CreateDump();
+		void CreateDump(std::string name);
 
 };
