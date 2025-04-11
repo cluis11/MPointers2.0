@@ -108,3 +108,15 @@ private:
         return resultado;
     }
 };
+
+// --- ESPECIALIZACIÓN PARA std::string ---
+
+template <>
+inline std::string MemoryManagerClient::SerializarExacto<std::string>(const std::string& str) {
+    return str;  // El string ya está en formato serializable
+}
+
+template <>
+inline std::string MemoryManagerClient::DeserializarExacto<std::string>(const std::string& binario) {
+    return binario;  // Ya es el string en crudo
+}

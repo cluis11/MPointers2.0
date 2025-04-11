@@ -1,25 +1,32 @@
 #include <iostream>
-#include "LinkedList.h"
+#include "MPointer.h"  // Asegurate de incluir tu clase MPointer
 
 int main() {
     try {
-        LinkedList<int> list;
+        // MPointer de tipo int
+        MPointer<int> ptrInt = MPointer<int>::New();
+        *ptrInt = 42;
+        std::cout << "INT: " << *ptrInt << std::endl;
 
-        // Agregar elementos
-        list.Add(10);
-        list.Add(20);
-        list.Add(30);
+        // MPointer de tipo float
+        MPointer<float> ptrFloat = MPointer<float>::New();
+        *ptrFloat = 3.14f;
+        std::cout << "FLOAT: " << *ptrFloat << std::endl;
 
-        // Recorrer lista
-        std::cout << "Elemento en posición 1: " << list.Get(1) << std::endl;  // 20
+        // MPointer de tipo char
+        MPointer<char> ptrChar = MPointer<char>::New();
+        *ptrChar = 'A';
+        std::cout << "CHAR: " << *ptrChar << std::endl;
 
-        // Eliminar
-        list.Remove(20);
-        std::cout << "Tamaño después de eliminar: " << list.Size() << std::endl;  // 2
+        // MPointer de tipo string
+        MPointer<std::string> ptrString = MPointer<std::string>::New();
+        *ptrString = "Hola Mundo";
+        std::cout << "STRING: " << std::string(*ptrString) << std::endl;
 
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
+
+    } catch (const std::exception& ex) {
+        std::cerr << "Error: " << ex.what() << std::endl;
     }
+
     return 0;
 }
