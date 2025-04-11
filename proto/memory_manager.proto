@@ -9,53 +9,38 @@ service MemoryManager {
     rpc Get(GetRequest) returns (GetResponse);
     rpc IncreaseRefCount(IncreaseRefCountRequest) returns (IncreaseRefCountResponse);
     rpc DecreaseRefCount(DecreaseRefCountRequest) returns (DecreaseRefCountResponse);
-    
-    // Operaciones específicas para lista enlazada
-    rpc CreateNode(CreateNodeRequest) returns (CreateNodeResponse);
-    rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
-    rpc UpdateNode(UpdateNodeRequest) returns (UpdateNodeResponse);
 }
 
 // Mensajes básicos (existentes)
 message CreateRequest {
-    int32 size = 1;
-    string type = 2;
+    int32 size = 1; // Tamaño del espacio por reservar
+    string type = 2; // Tipo de dato del espacio por reservar
 }
 
 message CreateResponse {
-    bool success = 1;
-    int32 id = 2;
+    bool success = 1; // Indicador de existo de operacion create
+    int32 id = 2; // ID en el MemoryList
 }
 
 message SetRequest {
-    int32 id = 1;
-    oneof value {
-        int32 int_value = 2;
-        float float_value = 3;
-        string string_value = 4;
-        bytes serialized_value = 5;
-    }
+    int32 id = 1; // ID del MemoryList
+    bytes data = 2;  // Datos serializados en binario
 }
 
 message SetResponse {
-    bool success = 1;
+    bool success = 1; // Indicador de existo de operacion set
 }
 
 message GetRequest {
-    int32 id = 1;
+    int32 id = 1; // ID del MemoryList
 }
 
 message GetResponse {
-    bool success = 1;
-    oneof value {
-        int32 int_value = 2;
-        float float_value = 3;
-        string string_value = 4;
-        bytes serialized_value = 5;
-    }
+    bool success = 1; // Indicador de exito operacion de get 
+    bytes data = 2;  // Datos serializados en binario
 }
 
-// Mensajes para conteo de referencias (existentes)
+// Mensajes para manejo de referencias
 message IncreaseRefCountRequest {
     int32 id = 1;
 }
@@ -69,37 +54,5 @@ message DecreaseRefCountRequest {
 }
 
 message DecreaseRefCountResponse {
-    bool success = 1;
-}
-
-// Mensajes nuevos para lista enlazada
-message CreateNodeRequest {
-    string node_type = 1;  // Ej: "MNode<int>"
-    bytes initial_data = 2; // Datos serializados iniciales
-}
-
-message CreateNodeResponse {
-    bool success = 1;
-    int32 node_id = 2;
-    int32 data_id = 3; // ID del bloque de datos del nodo
-}
-
-message GetNodeRequest {
-    int32 node_id = 1;
-}
-
-message GetNodeResponse {
-    bool success = 1;
-    int32 data_id = 2;
-    int32 next_id = 3; // ID del siguiente nodo (0 si es nulo)
-}
-
-message UpdateNodeRequest {
-    int32 node_id = 1;
-    int32 next_id = 2; // Nuevo ID para next
-    bytes updated_data = 3; // Datos actualizados (opcional)
-}
-
-message UpdateNodeResponse {
     bool success = 1;
 }

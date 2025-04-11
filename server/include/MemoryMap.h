@@ -1,26 +1,17 @@
 #pragma once
-#include <iostream>
+
 #include <string>
-#include <mutex>
+#include <cstddef>
+#include <cstring>
 
 struct MemoryMap {
-	std::mutex blockMutex;
-	int id;
-	std::size_t size;
-	std::string type;
-	int refCount;
-	void* ptr;
-	bool isNew;
+    int id;
+    size_t size;
+    std::string type;
+    int refCount;
+    void* ptr;
+    bool isNew;
 
-	//Métodos
-	MemoryMap(int id, std::size_t size, std::string type, void* ptr);
-	void print() const;
-};
-
-struct Node {
-	MemoryMap block;
-	Node* next;
-
-	//Métodos
-	Node(int id, std::size_t size, std::string type, void* ptr);
+    MemoryMap(int id, size_t size, std::string type, void* ptr);
+    void print() const;
 };
