@@ -1,0 +1,26 @@
+# Visual Studio
+.vs/
+.vscode/
+.idea/
+
+# Archivos de configuración de Visual Studio
+*.user
+*.userosscache
+*.suo
+*.sdf
+*.opensdf
+*.dbmdl
+*.pdb
+*.cache
+
+# Archivos de compilación
+bin/
+obj/
+Debug/
+Release/
+
+# Archivos de la solución
+*.sln
+*.vcxproj*
+*.vcxproj.filters
+*.vcxproj.user

@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package memorymanager;
+
+service MemoryManager {
+    // Operaciones básicas de MPointers
+    rpc Create(CreateRequest) returns (CreateResponse);
+    rpc Set(SetRequest) returns (SetResponse);
+    rpc Get(GetRequest) returns (GetResponse);
+    rpc IncreaseRefCount(IncreaseRefCountRequest) returns (IncreaseRefCountResponse);
+    rpc DecreaseRefCount(DecreaseRefCountRequest) returns (DecreaseRefCountResponse);
+}
+
+// Mensajes básicos (existentes)
+message CreateRequest {
+    int32 size = 1; // Tamaño del espacio por reservar
+    string type = 2; // Tipo de dato del espacio por reservar
+}
+
+message CreateResponse {
+    bool success = 1; // Indicador de existo de operacion create
+    int32 id = 2; // ID en el MemoryList
+}
+
+message SetRequest {
+    int32 id = 1; // ID del MemoryList
+    bytes data = 2;  // Datos serializados en binario
+}
+
+message SetResponse {
+    bool success = 1; // Indicador de existo de operacion set
+}
+
+message GetRequest {
+    int32 id = 1; // ID del MemoryList
+}
+
+message GetResponse {
+    bool success = 1; // Indicador de exito operacion de get 
+    bytes data = 2;  // Datos serializados en binario
+}
+
+// Mensajes para manejo de referencias
+message IncreaseRefCountRequest {
+    int32 id = 1;
+}
+
+message IncreaseRefCountResponse {
+    bool success = 1;
+}
+
+message DecreaseRefCountRequest {
+    int32 id = 1;
+}
+
+message DecreaseRefCountResponse {
+    bool success = 1;
+}
