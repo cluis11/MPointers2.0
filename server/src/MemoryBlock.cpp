@@ -133,6 +133,7 @@ std::string MemoryBlock::Get(int id) {
     if (!block) {
         throw std::runtime_error("Memory block not found");
     }
+    dumps.CreateDump();
     return std::string(static_cast<char*>(block->ptr), block->size);
 }
 
