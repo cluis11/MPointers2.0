@@ -49,6 +49,7 @@ int MemoryBlock::Create(size_t size, const std::string& type) {
         memList.insert(nextId, size, type, addr);
         usedMem += size;
         memAtEnd -= size;
+        dumps.CreateDump();
         return nextId++;
     }
     
@@ -58,6 +59,7 @@ int MemoryBlock::Create(size_t size, const std::string& type) {
         int reusedId = memList.reuseFreeBlock(size, type, nextId);
         if (reusedId > -1) {
             nextId++;
+            dumps.CreateDump();
             return reusedId;
         }
     }
@@ -71,6 +73,7 @@ int MemoryBlock::Create(size_t size, const std::string& type) {
         memList.insert(nextId, size, type, addr);
         usedMem += size;
         memAtEnd -= size;
+        dumps.CreateDump();
         return nextId++;
     }
     
@@ -122,6 +125,7 @@ void MemoryBlock::Set(int id, const std::string& serialized_data) {
     }
     std::memcpy(block->ptr, serialized_data.data(), block->size);
     block->isNew = false;
+    dumps.CreateDump();
 }
 
 std::string MemoryBlock::Get(int id) {
@@ -161,8 +165,10 @@ void MemoryBlock::DecreaseRefCount(int id) {
         throw std::runtime_error("Memory block not found");
     }    
     --block->refCount;
+    dumps.CreateDump();
     if (block->refCount == 0) {
         CleanMemorySpace(block);
+        dumps.CreateDump();
     }
 }
 
@@ -172,6 +178,7 @@ void MemoryBlock::IncreaseRefCount(int id) {
         throw std::runtime_error("Memory block not found");
     }
     ++block->refCount;
+    dumps.CreateDump();
 }
 
 MemoryMap* MemoryBlock::GetMemoryMapById(int id) {

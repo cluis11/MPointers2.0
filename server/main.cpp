@@ -22,6 +22,7 @@ int main(int argc, char** argv) {
     std::string listenPort;
     size_t memSize = 0;
     std::string dumpFolder;
+    std::string folder;
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -39,7 +40,7 @@ int main(int argc, char** argv) {
     if (listenPort.empty() || memSize == 0 || dumpFolder.empty()) {
         return 1;
     }
-
-    RunServer(listenPort, memSize, dumpFolder);
+    folder = "." + dumpFolder;
+    RunServer(listenPort, memSize, folder);
     return 0;
 }

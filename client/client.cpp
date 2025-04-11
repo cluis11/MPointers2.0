@@ -6,7 +6,8 @@ int main() {
         // MPointer de tipo int
         MPointer<int> ptrInt = MPointer<int>::New();
         *ptrInt = 42;
-        std::cout << "INT: " << *ptrInt << std::endl;
+        MPointer<int> ptrInt2 = ptrInt;
+        std::cout << "INT2: " << *ptrInt2 << std::endl;
 
         // MPointer de tipo float
         MPointer<float> ptrFloat = MPointer<float>::New();
